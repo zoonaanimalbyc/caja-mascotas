@@ -1,0 +1,9 @@
+{
+  "name": "Arqueos Zoona",
+  "short_name": "Zoona",
+  "start_url": "/caja-mascotas/",
+  "display": "standalone",
+  "background_color": "#FAF7F0",
+  "theme_color": "#1F4A2C",
+  "icons": []
+}
