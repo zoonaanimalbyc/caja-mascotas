@@ -1,5 +1,28 @@
 import { API_URL } from './config';
 
+/* ---------- CACHÉ EN MEMORIA ---------- */
+const cache = {
+  usuarios: { data: null, ts: 0 },
+  admins:   { data: null, ts: 0 },
+};
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+function getCache(key) {
+  const c = cache[key];
+  if (c.data && (Date.now() - c.ts) < CACHE_TTL) return c.data;
+  return null;
+}
+
+function setCache(key, data) {
+  cache[key] = { data, ts: Date.now() };
+}
+
+function clearCache(key) {
+  if (key) cache[key] = { data: null, ts: 0 };
+  else Object.keys(cache).forEach(k => cache[k] = { data: null, ts: 0 });
+}
+
+/* ---------- FETCH ---------- */
 async function call(action, payload = {}) {
   const res = await fetch(API_URL, {
     method: 'POST',
@@ -34,12 +57,31 @@ export const api = {
   abrirTurno:              (data)       => call('abrirTurno', data),
   cerrarTurno:             (data)       => call('cerrarTurno', data),
   getEstadoTurnos:         (data)       => call('getEstadoTurnos', data),
-  getUsuarios:             ()           => call('getUsuarios'),
-  getAdmins:               ()           => call('getAdmins'),
+
+  // Con caché
+  getUsuarios: async () => {
+    const cached = getCache('usuarios');
+    if (cached) return cached;
+    const data = await call('getUsuarios');
+    setCache('usuarios', data);
+    return data;
+  },
+
+  getAdmins: async () => {
+    const cached = getCache('admins');
+    if (cached) return cached;
+    const data = await call('getAdmins');
+    setCache('admins', data);
+    return data;
+  },
+
   revisarDescuadre:        (data)       => call('revisarDescuadre', data),
   getDescuadresPendientes: (data)       => call('getDescuadresPendientes', data),
   getHistorialRevisiones:  (data)       => call('getHistorialRevisiones', data),
   getEstadisticas:         (data)       => call('getEstadisticas', data),
   getHistorial:            (data)       => call('getHistorial', data),
   getDetalleTurno:         (data)       => call('getDetalleTurno', data),
+
+  // Utilidad para limpiar el caché (llamar después de guardar)
+  clearCache,
 };
