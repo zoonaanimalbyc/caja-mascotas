@@ -1,701 +1,344 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { DENOMS, TIPOS_MOV } from '../config';
-import { useRecordatorioArqueo, pedirPermisoNotificaciones, mostrarNotificacion } from '../utils/recordatorios';
 
 const hoy = () => new Date().toISOString().slice(0, 10);
-const hora = () => new Date().toTimeString().slice(0, 5);
 const fmt = n => '$' + Number(n || 0).toLocaleString('es-CO');
-const LIMITE_VENTAS = 50000000;
 
-export default function Operar({ sede, user }) {
-  const [estado, setEstado] = useState(null);
-  const [usuarios, setUsuarios] = useState([]);
-  const [arqueosHoy, setArqueosHoy] = useState([]);
+const fmtHora = (h) => {
+  if (!h) return '—';
+  const s = String(h);
+  if (s.includes('T')) return s.split('T')[1]?.slice(0, 5) || '';
+  if (s.includes(':')) return s.slice(0, 5);
+  return s;
+};
+
+const fmtTipo = (t) => {
+  if (t === 'apertura') return '🌅 Apertura';
+  if (t === 'cierre')   return '🌙 Cierre';
+  if (t === '2h')       return '⏰ 2h';
+  return t;
+};
+
+const claseTipo = (t) => {
+  if (t === 'apertura') return 'badge-apertura';
+  if (t === 'cierre')   return 'badge-cierre';
+  return 'badge-2h';
+};
+
+const fmtTipoMov = (t) => {
+  const map = {
+    INGRESO: '💰 Ingreso',
+    EGRESO: '📤 Egreso',
+    FLETE: '🛵 Flete',
+    SPA: '💆 SPA',
+    SPA_QR: '📱 SPA QR',
+  };
+  return map[t] || t;
+};
+
+export default function Hoy({ sede, user }) {
+  const [data, setData] = useState({ arqueos: [], movimientos: [], cierre: null });
+  const [estadoTurnos, setEstadoTurnos] = useState(null);
   const [load, setLoad] = useState(true);
-  const [vista, setVista] = useState('menu');
-  const [turnoActivo, setTurnoActivo] = useState(null);
-
-  const [cant, setCant] = useState({});
-  const [movTipo, setMovTipo] = useState('EGRESO');
-  const [movDesc, setMovDesc] = useState('');
-  const [movValor, setMovValor] = useState('');
-  const [ventas, setVentas] = useState('');
-  const [obs, setObs] = useState('');
-
-  // Modal de PIN
-  const [pinModalAbierto, setPinModalAbierto] = useState(false);
-  const [pin, setPin] = useState('');
-  const [pinError, setPinError] = useState('');
-  const [guardandoPin, setGuardandoPin] = useState(false);
-
-  const [res, setRes] = useState(null);
-  const [error, setError] = useState('');
-  const [msg, setMsg] = useState('');
-  const [guardando, setGuardando] = useState(false);
-
-  // ---------- CÁLCULOS DERIVADOS ----------
-  const t1 = estado?.turno1 || {};
-  const t2 = estado?.turno2 || {};
-  const diaCerrado = estado?.diaCerrado || false;
-
-  const tipoEstado =
-    diaCerrado ? 'diaCerrado' :
-    (!t1.apertura && !t2.apertura) ? 'sinTurno' :
-    'turnoActivo';
-
-  const recordatorio = useRecordatorioArqueo(arqueosHoy, tipoEstado);
-  const totalContado = DENOMS.reduce((a, d) => a + (Number(cant[d.valor] || 0) * d.valor), 0);
-
-  // ---------- EFECTOS ----------
-  useEffect(() => {
-    async function cargar() {
-      setLoad(true);
-      try {
-        const [e, u, a] = await Promise.all([
-          api.getEstadoTurnos({ sede, fecha: hoy() }),
-          api.getUsuarios().catch(() => []),
-          api.getHoy(sede, hoy()).catch(() => ({ arqueos: [] })),
-        ]);
-        setEstado(e);
-        setUsuarios(u || []);
-        setArqueosHoy(a.arqueos || []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoad(false);
-      }
-    }
-    cargar();
-  }, [sede, guardando]);
+  const [abierto, setAbierto] = useState({ arqueos: true, movimientos: false, cierre: false });
 
   useEffect(() => {
-    pedirPermisoNotificaciones();
-  }, []);
-
-  useEffect(() => {
-    if (recordatorio && recordatorio.urgente) {
-      mostrarNotificacion('⏰ Arqueo pendiente', recordatorio.mensaje);
-    }
-  }, [recordatorio?.mensaje]);
-
-  // Soporte Enter en el modal de PIN
-  useEffect(() => {
-    if (!pinModalAbierto) return;
-    function onKey(e) {
-      if (e.key >= '0' && e.key <= '9') {
-        e.preventDefault();
-        setPin(p => p.length < 6 ? p + e.key : p);
-      } else if (e.key === 'Backspace') {
-        e.preventDefault();
-        setPin(p => p.slice(0, -1));
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        confirmarPin();
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        cerrarPinModal();
-      }
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [pinModalAbierto, pin]);
-
-  // ---------- FUNCIONES ----------
-  async function recargar() {
     setLoad(true);
-    try {
-      const [e, u, a] = await Promise.all([
-        api.getEstadoTurnos({ sede, fecha: hoy() }),
-        api.getUsuarios().catch(() => []),
-        api.getHoy(sede, hoy()).catch(() => ({ arqueos: [] })),
-      ]);
-      setEstado(e);
-      setUsuarios(u || []);
-      setArqueosHoy(a.arqueos || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoad(false);
-    }
-  }
+    Promise.all([
+      api.getHoy(sede, hoy()),
+      api.getEstadoTurnos({ sede, fecha: hoy() }).catch(() => null),
+    ])
+      .then(([h, t]) => { setData(h); setEstadoTurnos(t); })
+      .finally(() => setLoad(false));
+  }, [sede]);
 
-  const ajustar = (valor, delta) => {
-    const actual = Number(cant[valor] || 0);
-    const nuevo = Math.max(0, actual + delta);
-    setCant({ ...cant, [valor]: nuevo });
-  };
+  const toggle = (key) => setAbierto({ ...abierto, [key]: !abierto[key] });
 
-  const setValor = (valor, v) => {
-    const n = Math.max(0, Number(v) || 0);
-    setCant({ ...cant, [valor]: n });
-  };
+  if (load) return <div className="loading">Cargando datos…</div>;
 
-  const resetForms = () => {
-    setCant({});
-    setMovDesc('');
-    setMovValor('');
-    setVentas('');
-    setObs('');
-    setError('');
-    setMsg('');
-    setPin('');
-    setPinError('');
-  };
+  // ----- ESTADO EN VIVO DEL TURNO -----
+  const estadoTurno = (() => {
+    if (!estadoTurnos) return null;
+    const t1 = estadoTurnos.turno1 || {};
+    const t2 = estadoTurnos.turno2 || {};
 
-  // ---------- VALIDAR Y ABRIR MODAL DE PIN ----------
-  function intentarGuardarMovimiento() {
-    // Validaciones
-    if (!movTipo) { setError('⚠️ Debes elegir un tipo de movimiento'); return; }
-    if (!movDesc || !movDesc.trim()) { setError('⚠️ La descripción es obligatoria'); return; }
-    const v = Number(movValor || 0);
-    if (!movValor || v <= 0) { setError('⚠️ Debes ingresar un valor mayor a 0'); return; }
+    let turnoData = null;
+    if (t1.apertura && !t1.cierre) turnoData = { ...t1.apertura, numero: 1 };
+    else if (t2.apertura && !t2.cierre) turnoData = { ...t2.apertura, numero: 2 };
+    else return null;
 
-    // Abrir modal de PIN
-    setError('');
-    setPin('');
-    setPinError('');
-    setPinModalAbierto(true);
-  }
+    const horaApertura = String(turnoData.hora_apertura || '').replace("'", '').slice(0, 5);
+    const ahora = new Date().toTimeString().slice(0, 5);
 
-  function cerrarPinModal() {
-    setPinModalAbierto(false);
-    setPin('');
-    setPinError('');
-  }
+    const saldoInicial = Number(turnoData.contado_apertura) || 0;
 
-  async function confirmarPin() {
-    if (!pin || pin.length < 4) {
-      setPinError('Ingresa tu PIN');
-      return;
-    }
-    setGuardandoPin(true);
-    setPinError('');
-    try {
-      const v = Number(movValor || 0);
-      const r = await api.guardarMovimiento({
-        sede, fecha: hoy(), hora: hora(),
-        tipo: movTipo,
-        descripcion: movDesc.trim(),
-        valor: v,
-        usuario_app: user.nombre || user.email,
-        pin_usuario: pin,
-        usuario_email: user.nombre || user.email,
-      });
-      cerrarPinModal();
-      resetForms();
-      setVista('menu');
-      setMsg(`✅ Movimiento guardado por ${r.registrado_por || 'usuario'}`);
-      setTimeout(() => setMsg(''), 3000);
-    } catch (e) {
-      setPinError(e.message);
-      setPin('');
-    } finally {
-      setGuardandoPin(false);
-    }
-  }
+    const movsTurno = (data.movimientos || []).filter(m => {
+      const h = String(m.hora || '').replace("'", '').slice(0, 5);
+      if (!horaApertura) return true;
+      return h >= horaApertura && h <= ahora;
+    });
 
-  // ---------- OTRAS ACCIONES ----------
-  async function abrirTurno() {
-    if (totalContado === 0) { setError('Debes contar al menos un billete o moneda'); return; }
-    setGuardando(true);
-    try {
-      const arqueoPayload = {
-        sede, fecha: hoy(), hora: hora(), tipo: 'apertura',
-        usuario_email: user.nombre || user.email,
-        observaciones: `Apertura turno ${turnoActivo}`,
-      };
-      DENOMS.forEach(d => arqueoPayload['d' + d.valor] = Number(cant[d.valor] || 0));
-      await api.guardarArqueo(arqueoPayload);
+    const sum = tipo => movsTurno.filter(m => m.tipo === tipo)
+                                  .reduce((a, m) => a + Number(m.valor || 0), 0);
 
-      await api.abrirTurno({
-        sede, fecha: hoy(), turno: turnoActivo,
-        hora: hora(), usuario: user.nombre || user.email,
-        contado: totalContado,
-        observaciones: '',
-      });
+    const total_ingresos = sum('INGRESO');
+    const total_egresos = sum('EGRESO');
+    const total_fletes = sum('FLETE');
+    const total_spa = sum('SPA');
 
-      resetForms();
-      setVista('menu');
-      await recargar();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setGuardando(false);
-    }
-  }
+    const arqueosTurno = (data.arqueos || []).filter(a => {
+      if (a.tipo === 'cierre') return false;
+      const h = String(a.hora || '').replace("'", '').slice(0, 5);
+      if (!horaApertura) return true;
+      return h >= horaApertura && h <= ahora;
+    });
 
-  async function guardarArqueo() {
-    if (totalContado === 0) { setError('Debes ingresar al menos una cantidad'); return; }
-    setGuardando(true);
-    try {
-      const payload = {
-        sede, fecha: hoy(), hora: hora(), tipo: '2h',
-        usuario_email: user.nombre || user.email,
-        observaciones: obs,
-      };
-      DENOMS.forEach(d => payload['d' + d.valor] = Number(cant[d.valor] || 0));
-      await api.guardarArqueo(payload);
-      resetForms();
-      setVista('menu');
-      setMsg('✅ Arqueo guardado');
-      setTimeout(() => setMsg(''), 3000);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setGuardando(false);
-    }
-  }
+    const ultimoArqueo = arqueosTurno.length > 0
+      ? arqueosTurno[arqueosTurno.length - 1]
+      : null;
 
-  async function cerrarTurno() {
-    const ventasNum = Number(ventas || 0);
-    if (ventasNum < 0) { setError('Las ventas no pueden ser negativas'); return; }
-    if (ventasNum > LIMITE_VENTAS) {
-      setError(`Las ventas no pueden pasar de ${fmt(LIMITE_VENTAS)}.`);
-      return;
-    }
-    if (totalContado === 0) { setError('Debes ingresar el arqueo'); return; }
-    setGuardando(true);
-    setError('');
+    const ventasSiigoActual = ultimoArqueo ? (Number(ultimoArqueo.ventas_siigo) || 0) : 0;
+    const contadoActual = ultimoArqueo
+      ? (Number(ultimoArqueo.total) || 0)
+      : saldoInicial;
 
-    try {
-      const arqueoPayload = {
-        sede, fecha: hoy(), hora: hora(), tipo: 'cierre',
-        usuario_email: user.nombre || user.email,
-        observaciones: `Cierre turno ${turnoActivo}`,
-      };
-      DENOMS.forEach(d => arqueoPayload['d' + d.valor] = Number(cant[d.valor] || 0));
-      await api.guardarArqueo(arqueoPayload);
+    const esperado = saldoInicial
+      + ventasSiigoActual
+      + total_ingresos
+      - total_egresos
+      - total_fletes
+      - total_spa;
 
-      const r = await api.cerrarDia({
-        sede, fecha: hoy(),
-        turno: turnoActivo,
-        ventas_siigo: ventasNum,
-        usuario_email: user.nombre || user.email,
-        observaciones: obs,
-        hora: hora(),
-      });
-      setRes(r);
+    const diferencia = contadoActual - esperado;
 
-      await api.cerrarTurno({
-        sede, fecha: hoy(),
-        turno: turnoActivo,
-        hora: hora(),
-        usuario: user.nombre || user.email,
-      });
+    return {
+      numero: turnoData.numero,
+      usuario: turnoData.usuario_apertura,
+      horaApertura,
+      saldoInicial,
+      ventasSiigoActual,
+      total_ingresos,
+      total_egresos,
+      total_fletes,
+      total_spa,
+      esperado,
+      contadoActual,
+      diferencia,
+      ultimoArqueo,
+      tieneArqueoParcial: !!ultimoArqueo,
+    };
+  })();
 
-      setVista('resultado');
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setGuardando(false);
-    }
-  }
-
-  // ---------- RENDER ----------
-  if (load) return <div className="loading">Cargando estado del día…</div>;
+  const t1 = estadoTurnos?.turno1 || {};
+  const t2 = estadoTurnos?.turno2 || {};
+  const diaCerrado = estadoTurnos?.diaCerrado;
 
   return (
     <div>
-      <h2>Registrar · {sede} · {hoy()}</h2>
+      <h2>Hoy · {sede} · {hoy()}</h2>
 
-      {msg && <p className="mensaje ok">{msg}</p>}
-
-      {vista === 'menu' && (
-        <>
-          {recordatorio && tipoEstado === 'turnoActivo' && (
-            <div className={`aviso-recordatorio ${recordatorio.urgente ? 'urgente' : ''}`}>
-              <div className="aviso-icono">⏰</div>
-              <div className="aviso-texto">
-                <strong>Recuerda hacer arqueo</strong>
-                <span>{recordatorio.mensaje}</span>
-              </div>
-              <button
-                className="aviso-btn"
-                onClick={() => { setVista('arqueo'); resetForms(); }}
-              >
-                💵 Hacer ahora
-              </button>
-            </div>
-          )}
-
-          {diaCerrado && (
-            <div className="card-estado card-ok">
-              <h3>✅ Día cerrado</h3>
-              <p>Ambos turnos quedaron registrados. El día está completo.</p>
-            </div>
-          )}
-
-          {!t1.apertura && (
-            <div className="card-estado card-accion">
-              <h3>🌅 Es hora de abrir el turno 1</h3>
-              <p>Cuenta los billetes y monedas con los que arranca el día.</p>
-              <button className="btn-guardar"
-                onClick={() => { setTurnoActivo(1); resetForms(); setVista('abrir'); }}>
-                🔓 Abrir turno 1
-              </button>
-            </div>
-          )}
-
-          {t1.apertura && !t1.cierre && (
-            <div className="card-estado card-activo">
-              <h3>☀️ Turno 1 en curso</h3>
-              <p>
-                Abierto por <b>{t1.apertura.usuario_apertura}</b> a las{' '}
-                {String(t1.apertura.hora_apertura).replace("'", "")}
-                <br />Saldo inicial: <b>{fmt(t1.apertura.saldo_inicial)}</b>
-                <br />Contado al abrir: <b>{fmt(t1.apertura.contado_apertura)}</b>
-              </p>
-              <div className="grid-botones">
-                <button onClick={() => { setVista('arqueo'); resetForms(); }}>💵 Arqueo parcial</button>
-                <button onClick={() => { setVista('movimiento'); resetForms(); }}>💸 Movimiento</button>
-                <button className="btn-acento"
-                  onClick={() => { setTurnoActivo(1); resetForms(); setVista('cerrar'); }}>
-                  🌙 Cerrar turno 1
-                </button>
-              </div>
-            </div>
-          )}
-
-          {t1.cierre && !t2.apertura && (
-            <div className="card-estado card-accion">
-              <h3>🌇 Es hora de abrir el turno 2</h3>
-              <p>
-                Cuenta el efectivo que recibiste del turno 1.
-                Debería ser: <b>{fmt(t1.cierre.contado)}</b>
-              </p>
-              <button className="btn-guardar"
-                onClick={() => { setTurnoActivo(2); resetForms(); setVista('abrir'); }}>
-                🔓 Abrir turno 2
-              </button>
-            </div>
-          )}
-
-          {t2.apertura && !t2.cierre && (
-            <div className="card-estado card-activo">
-              <h3>🌆 Turno 2 en curso</h3>
-              <p>
-                Abierto por <b>{t2.apertura.usuario_apertura}</b> a las{' '}
-                {String(t2.apertura.hora_apertura).replace("'", "")}
-                <br />Saldo inicial: <b>{fmt(t2.apertura.saldo_inicial)}</b>
-                <br />Contado al abrir: <b>{fmt(t2.apertura.contado_apertura)}</b>
-              </p>
-              {Number(t2.apertura.diferencia_apertura) !== 0 && (
-                <AlertaDiferencia monto={Number(t2.apertura.diferencia_apertura)} />
-              )}
-              <div className="grid-botones">
-                <button onClick={() => { setVista('arqueo'); resetForms(); }}>💵 Arqueo parcial</button>
-                <button onClick={() => { setVista('movimiento'); resetForms(); }}>💸 Movimiento</button>
-                <button className="btn-acento"
-                  onClick={() => { setTurnoActivo(2); resetForms(); setVista('cerrar'); }}>
-                  🌙 Cerrar turno 2 (fin del día)
-                </button>
-              </div>
-            </div>
-          )}
-        </>
+      {diaCerrado && (
+        <p className="info info-ok">✅ El día está completamente cerrado.</p>
       )}
 
-      {vista === 'abrir' && (
-        <>
-          <h3>🔓 Abrir turno {turnoActivo}</h3>
-          <p className="info">
-            {turnoActivo === 1
-              ? 'Cuenta los billetes y monedas con los que arranca el día.'
-              : 'Cuenta el efectivo que recibiste del turno 1.'}
-          </p>
-
-          {turnoActivo === 2 && t1.cierre && (
-            <p className="info">
-              El turno 1 dejó: <b>{fmt(t1.cierre.contado)}</b>
-            </p>
-          )}
-
-          <div className="denom-grid">
-            <div className="denom-col">
-              <h3>💵 Billetes</h3>
-              {DENOMS.filter(d => d.tipo === 'billete').map(d => (
-                <DenomRow key={d.valor} valor={d.valor} cant={Number(cant[d.valor] || 0)}
-                  onAjustar={ajustar} onSet={setValor} />
-              ))}
-            </div>
-            <div className="denom-col">
-              <h3>🪙 Monedas</h3>
-              {DENOMS.filter(d => d.tipo === 'moneda').map(d => (
-                <DenomRow key={d.valor} valor={d.valor} cant={Number(cant[d.valor] || 0)}
-                  onAjustar={ajustar} onSet={setValor} />
-              ))}
-            </div>
+      {/* Resumen del turno 1 cerrado */}
+      {t1.cierre && (
+        <div className={`cierre-resumen ${t1.cierre.estado === 'cuadra' ? 'ok' : 'err'}`}>
+          <div className="cierre-resumen-head">
+            <span>🌅 <b>Turno 1 cerrado</b></span>
+            <span className="cierre-resumen-dif">{fmt(t1.cierre.diferencia)}</span>
           </div>
-
-          <div className="total-box">
-            <span className="total-label">TOTAL CONTADO</span>
-            <span className="total-valor">{fmt(totalContado)}</span>
-          </div>
-
-          {turnoActivo === 2 && t1.cierre && totalContado > 0 && (
-            <AlertaDiferencia
-              monto={totalContado - Number(t1.cierre.contado)}
-              referencia={`turno 1 dejó ${fmt(t1.cierre.contado)}`}
-            />
-          )}
-
-          {error && <p className="err">{error}</p>}
-
-          <div className="acciones-arqueo">
-            <button className="btn-secundario" onClick={() => setVista('menu')}>← Volver</button>
-            <button className="btn-guardar" onClick={abrirTurno} disabled={guardando}>
-              {guardando ? 'Abriendo…' : `✔ Abrir turno ${turnoActivo} con ${fmt(totalContado)}`}
-            </button>
-          </div>
-        </>
-      )}
-
-      {vista === 'arqueo' && (
-        <>
-          <h3>💵 Arqueo parcial</h3>
-          <p className="info">Cuenta rápida para verificar. No cierra el turno.</p>
-
-          <div className="denom-grid">
-            <div className="denom-col">
-              <h3>💵 Billetes</h3>
-              {DENOMS.filter(d => d.tipo === 'billete').map(d => (
-                <DenomRow key={d.valor} valor={d.valor} cant={Number(cant[d.valor] || 0)}
-                  onAjustar={ajustar} onSet={setValor} />
-              ))}
-            </div>
-            <div className="denom-col">
-              <h3>🪙 Monedas</h3>
-              {DENOMS.filter(d => d.tipo === 'moneda').map(d => (
-                <DenomRow key={d.valor} valor={d.valor} cant={Number(cant[d.valor] || 0)}
-                  onAjustar={ajustar} onSet={setValor} />
-              ))}
-            </div>
-          </div>
-
-          <div className="total-box">
-            <span className="total-label">TOTAL CONTADO</span>
-            <span className="total-valor">{fmt(totalContado)}</span>
-          </div>
-
-          <label>Observaciones (opcional)</label>
-          <textarea value={obs} onChange={e => setObs(e.target.value)} rows="2" />
-
-          {error && <p className="err">{error}</p>}
-
-          <div className="acciones-arqueo">
-            <button className="btn-secundario" onClick={() => setVista('menu')}>← Volver</button>
-            <button className="btn-guardar" onClick={guardarArqueo} disabled={guardando}>
-              {guardando ? 'Guardando…' : '💾 Guardar arqueo'}
-            </button>
-          </div>
-        </>
-      )}
-
-      {vista === 'movimiento' && (
-        <>
-          <h3>💸 Movimiento de caja</h3>
-          <p className="info">Todos los campos son obligatorios. Al guardar se pedirá tu PIN.</p>
-
-          <label>Tipo de movimiento <span style={{ color: '#B4553F' }}>*</span></label>
-          <select value={movTipo} onChange={e => setMovTipo(e.target.value)}>
-            {TIPOS_MOV.map(t => (
-              <option key={t.id} value={t.id}>{t.label}</option>
-            ))}
-          </select>
-
-          <label>Descripción <span style={{ color: '#B4553F' }}>*</span></label>
-          <input
-            value={movDesc}
-            onChange={e => setMovDesc(e.target.value)}
-            placeholder="Ej: Pago proveedor, venta especial"
-          />
-
-          <label>Valor <span style={{ color: '#B4553F' }}>*</span></label>
-          <input
-            type="number"
-            value={movValor}
-            onChange={e => setMovValor(e.target.value)}
-            placeholder="0"
-          />
-          {movValor && Number(movValor) > 0 && (
-            <p className="preview-valor">Se registrará: <b>{fmt(movValor)}</b></p>
-          )}
-
-          {error && <p className="err">{error}</p>}
-
-          <div className="acciones-arqueo">
-            <button className="btn-secundario" onClick={() => setVista('menu')}>← Volver</button>
-            <button className="btn-guardar" onClick={intentarGuardarMovimiento}>
-              💾 Guardar movimiento
-            </button>
-          </div>
-        </>
-      )}
-
-      {vista === 'cerrar' && (
-        <>
-          <h3>🌙 Cerrar turno {turnoActivo}</h3>
-          <p className="info">
-            Cuenta el efectivo y las ventas SIIGO. Al confirmar, se guardan el arqueo y el cierre.
-          </p>
-
-          <div className="denom-grid">
-            <div className="denom-col">
-              <h3>💵 Billetes</h3>
-              {DENOMS.filter(d => d.tipo === 'billete').map(d => (
-                <DenomRow key={d.valor} valor={d.valor} cant={Number(cant[d.valor] || 0)}
-                  onAjustar={ajustar} onSet={setValor} />
-              ))}
-            </div>
-            <div className="denom-col">
-              <h3>🪙 Monedas</h3>
-              {DENOMS.filter(d => d.tipo === 'moneda').map(d => (
-                <DenomRow key={d.valor} valor={d.valor} cant={Number(cant[d.valor] || 0)}
-                  onAjustar={ajustar} onSet={setValor} />
-              ))}
-            </div>
-          </div>
-
-          <div className="total-box">
-            <span className="total-label">TOTAL CONTADO</span>
-            <span className="total-valor">{fmt(totalContado)}</span>
-          </div>
-
-          <label>Ventas en efectivo SIIGO (turno {turnoActivo})</label>
-          <input type="number" value={ventas} onChange={e => setVentas(e.target.value)} placeholder="0" />
-
-          <label>Observaciones (opcional)</label>
-          <textarea value={obs} onChange={e => setObs(e.target.value)} rows="2" />
-
-          {error && <p className="err">{error}</p>}
-
-          <div className="acciones-arqueo">
-            <button className="btn-secundario" onClick={() => setVista('menu')}>← Volver</button>
-            <button className="btn-guardar" onClick={cerrarTurno} disabled={guardando}>
-              {guardando ? 'Cerrando…' : `🌙 Cerrar turno ${turnoActivo}`}
-            </button>
-          </div>
-        </>
-      )}
-
-      {vista === 'resultado' && res && (
-        <>
-          <div className={`cierre ${res.estado}`}>
-            <h3>📊 Resultado del turno {res.turno}</h3>
-            <p><span>Saldo inicial</span><b>{fmt(res.saldo_inicial)}</b></p>
-            <p><span>Ventas SIIGO</span><b>{fmt(res.ventas_siigo)}</b></p>
-            <p><span>+ Ingresos</span><b>{fmt(res.total_ingresos)}</b></p>
-            <p><span>− Egresos</span><b>{fmt(res.total_egresos)}</b></p>
-            <p><span>− Fletes</span><b>{fmt(res.total_fletes)}</b></p>
-            <p><span>− SPA</span><b>{fmt(res.total_spa)}</b></p>
-            <p style={{ borderTop: '1px dashed rgba(0,0,0,0.2)', paddingTop: 8 }}>
-              <span>Esperado</span><b>{fmt(res.esperado)}</b>
-            </p>
-            <p><span>Contado</span><b>{fmt(res.contado)}</b></p>
-            <p><span>Diferencia</span><b>{fmt(res.diferencia)}</b></p>
-            <p className="estado-cierre">
-              {res.estado === 'cuadra' ? '🟢 Cuadra' : '🔴 Descuadre'}
-            </p>
-          </div>
-
-          {res.estado === 'descuadre' && (
-            <div className="info info-alerta">
-              📧 <b>Descuadre registrado como "pendiente de revisión".</b>
-              <br />
-              El administrador recibió el aviso y puede revisarlo desde el Dashboard.
-            </div>
-          )}
-
-          <div className="acciones-arqueo">
-            <button className="btn-guardar"
-              onClick={() => { resetForms(); setRes(null); setVista('menu'); recargar(); }}>
-              Volver al inicio
-            </button>
-          </div>
-        </>
-      )}
-
-      {/* ---------- MODAL DE PIN ---------- */}
-      {pinModalAbierto && (
-        <div className="modal-overlay" onClick={cerrarPinModal}>
-          <div className="modal-box modal-pin" onClick={e => e.stopPropagation()}>
-            <div className="modal-head">
-              <h3>🔐 Confirma con tu PIN</h3>
-              <button className="modal-close" onClick={cerrarPinModal}>✕</button>
-            </div>
-            <div className="modal-body">
-              <p className="info">
-                Ingresa tu PIN para registrar el movimiento.
-                Quedará guardado con tu nombre.
-              </p>
-
-              <div className="pin-display" style={{ margin: '20px 0' }}>
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <span key={i} className={`dot ${i < pin.length ? 'lleno' : ''}`} style={{
-                    opacity: i >= 4 ? (pin.length > 4 ? 1 : 0.3) : 1
-                  }} />
-                ))}
-              </div>
-
-              <div className="keypad">
-                {['1','2','3','4','5','6','7','8','9','←','0','✓'].map(t => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => {
-                      if (t === '←') setPin(pin.slice(0, -1));
-                      else if (t === '✓') confirmarPin();
-                      else if (pin.length < 6) setPin(pin + t);
-                    }}
-                    disabled={guardandoPin}
-                  >{t}</button>
-                ))}
-              </div>
-
-              {pinError && <p className="err">{pinError}</p>}
-              {guardandoPin && <p className="info">Validando PIN…</p>}
-            </div>
+          <div className="cierre-resumen-body">
+            {t1.cierre.estado === 'cuadra' ? '🟢 Cuadra' : '🔴 Descuadre'}
+            {' · '}Contado: <b>{fmt(t1.cierre.contado)}</b>
           </div>
         </div>
       )}
-    </div>
-  );
-}
 
-function AlertaDiferencia({ monto, referencia }) {
-  const fmtLocal = n => '$' + Number(n || 0).toLocaleString('es-CO');
-  const abs = Math.abs(monto);
-  const falta = monto < 0;
+      {/* Estado en vivo del turno activo */}
+      {estadoTurno && (
+        <EstadoTurno estado={estadoTurno} />
+      )}
 
-  return (
-    <div className={`alerta-recibo ${falta ? 'falta' : 'sobra'}`}>
-      <strong>{falta ? '🔴 FALTA DINERO' : '🟡 SOBRA DINERO'}</strong>
-      <span>
-        {falta ? 'Faltan' : 'Sobran'} <b>{fmtLocal(abs)}</b>
-        {referencia && <> respecto a: <b>{referencia}</b></>}
-      </span>
-      <small>
-        {abs > 50000
-          ? '⚠️ Diferencia alta — notifica al administrador'
-          : 'Registra una observación si es necesario'}
-      </small>
-    </div>
-  );
-}
-
-function DenomRow({ valor, cant, onAjustar, onSet }) {
-  const fmtLocal = n => '$' + Number(n || 0).toLocaleString('es-CO');
-  return (
-    <div className="denom-row">
-      <span className="denom-valor">{fmtLocal(valor)}</span>
-      <div className="denom-controls">
-        <button type="button" className="btn-menos" onClick={() => onAjustar(valor, -1)}>−</button>
-        <input type="number" min="0" value={cant || ''}
-          onChange={e => onSet(valor, e.target.value)} placeholder="0" />
-        <button type="button" className="btn-mas" onClick={() => onAjustar(valor, +1)}>+</button>
+      {/* ------ ACORDEÓN ARQUEOS ------ */}
+      <div className="acordeon">
+        <button className="acordeon-head" onClick={() => toggle('arqueos')}>
+          <span>🌅 Arqueos <b>({data.arqueos.length})</b></span>
+          <span className={`chevron ${abierto.arqueos ? 'open' : ''}`}>▾</span>
+        </button>
+        {abierto.arqueos && (
+          <div className="acordeon-body">
+            {data.arqueos.length === 0 ? (
+              <p className="tabla-vacia">Sin arqueos hoy</p>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>Tipo</th>
+                    <th>Responsable</th>
+                    <th style={{ textAlign: 'right' }}>Ventas SIIGO</th>
+                    <th style={{ textAlign: 'right' }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.arqueos.map(a => (
+                    <tr key={a.id}>
+                      <td className="cell-num">{fmtHora(a.hora)}</td>
+                      <td>
+                        <span className={`tipo-badge ${claseTipo(a.tipo)}`}>
+                          {fmtTipo(a.tipo)}
+                        </span>
+                      </td>
+                      <td>{a.usuario_email || '—'}</td>
+                      <td className="cell-num" style={{ textAlign: 'right' }}>
+                        {Number(a.ventas_siigo) > 0 ? fmt(a.ventas_siigo) : '—'}
+                      </td>
+                      <td className="cell-num" style={{ textAlign: 'right' }}>{fmt(a.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
       </div>
-      <span className="denom-total">{fmtLocal(cant * valor)}</span>
+
+      {/* ------ ACORDEÓN MOVIMIENTOS ------ */}
+      <div className="acordeon">
+        <button className="acordeon-head" onClick={() => toggle('movimientos')}>
+          <span>💸 Movimientos <b>({data.movimientos.length})</b></span>
+          <span className={`chevron ${abierto.movimientos ? 'open' : ''}`}>▾</span>
+        </button>
+        {abierto.movimientos && (
+          <div className="acordeon-body">
+            {data.movimientos.length === 0 ? (
+              <p className="tabla-vacia">Sin movimientos hoy</p>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>Tipo</th>
+                    <th>Descripción</th>
+                    <th>Responsable</th>
+                    <th style={{ textAlign: 'right' }}>Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.movimientos.map(m => (
+                    <tr key={m.id}>
+                      <td className="cell-num">{fmtHora(m.hora)}</td>
+                      <td><span className="tipo-badge badge-mov">{fmtTipoMov(m.tipo)}</span></td>
+                      <td>
+                        {m.descripcion && String(m.descripcion).trim() ? (
+                          m.descripcion
+                        ) : (
+                          <span style={{ color: '#AAA', fontStyle: 'italic' }}>Sin descripción</span>
+                        )}
+                      </td>
+                      <td>{m.responsable || '—'}</td>
+                      <td className="cell-num" style={{ textAlign: 'right' }}>{fmt(m.valor)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ------ ACORDEÓN CIERRE ------ */}
+      <div className="acordeon">
+        <button className="acordeon-head" onClick={() => toggle('cierre')}>
+          <span>
+            📊 Cierre del día{' '}
+            {data.cierre && (
+              <span className={`badge-estado ${data.cierre.estado === 'cuadra' ? 'ok' : 'err'}`}>
+                {data.cierre.estado === 'cuadra' ? '🟢 Cuadra' : '🔴 Descuadre'}
+              </span>
+            )}
+          </span>
+          <span className={`chevron ${abierto.cierre ? 'open' : ''}`}>▾</span>
+        </button>
+        {abierto.cierre && (
+          <div className="acordeon-body">
+            {!data.cierre ? (
+              <p className="tabla-vacia">Aún no se ha cerrado el día.</p>
+            ) : (
+              <div className={`cierre ${data.cierre.estado}`} style={{ margin: 0 }}>
+                <p><span>Esperado</span><b>{fmt(data.cierre.esperado)}</b></p>
+                <p><span>Contado</span><b>{fmt(data.cierre.contado)}</b></p>
+                <p><span>Diferencia</span><b>{fmt(data.cierre.diferencia)}</b></p>
+                <p className="estado-cierre">
+                  {data.cierre.estado === 'cuadra'
+                    ? '🟢 Cuadra perfectamente'
+                    : '🔴 Descuadre — notificado al admin'}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EstadoTurno({ estado }) {
+  const fmtLocal = n => '$' + Number(n || 0).toLocaleString('es-CO');
+  const diferencia = estado.diferencia;
+  const cuadra = diferencia === 0;
+  const clase = cuadra ? 'ok' : (diferencia < 0 ? 'falta' : 'sobra');
+
+  return (
+    <div className={`estado-turno ${clase}`}>
+      <div className="estado-turno-titulo">
+        📊 Estado en vivo del turno {estado.numero}
+      </div>
+      <div className="estado-turno-body">
+        <div className="estado-linea">
+          <span>Saldo inicial (contado apertura)</span>
+          <b>{fmtLocal(estado.saldoInicial)}</b>
+        </div>
+        <div className="estado-linea">
+          <span>Ventas SIIGO {estado.tieneArqueoParcial ? '(último arqueo)' : '(sin arqueo aún)'}</span>
+          <b>+{fmtLocal(estado.ventasSiigoActual)}</b>
+        </div>
+        <div className="estado-linea">
+          <span>+ Ingresos</span>
+          <b>+{fmtLocal(estado.total_ingresos)}</b>
+        </div>
+        <div className="estado-linea">
+          <span>− Egresos</span>
+          <b>−{fmtLocal(estado.total_egresos)}</b>
+        </div>
+        <div className="estado-linea">
+          <span>− Fletes</span>
+          <b>−{fmtLocal(estado.total_fletes)}</b>
+        </div>
+        <div className="estado-linea">
+          <span>− SPA</span>
+          <b>−{fmtLocal(estado.total_spa)}</b>
+        </div>
+        <div className="estado-linea estado-linea-total">
+          <span>ESPERADO AHORA</span>
+          <b>{fmtLocal(estado.esperado)}</b>
+        </div>
+        <div className="estado-linea">
+          <span>
+            {estado.tieneArqueoParcial
+              ? `Último arqueo (${String(estado.ultimoArqueo.hora).replace("'", '').slice(0, 5)})`
+              : 'Contado apertura'}
+          </span>
+          <b>{fmtLocal(estado.contadoActual)}</b>
+        </div>
+        <div className={`estado-linea estado-linea-dif ${clase}`}>
+          <span>DIFERENCIA</span>
+          <b>
+            {cuadra ? '🟢 $0' : (diferencia < 0 ? '🔴 ' : '🟡 +') + fmtLocal(diferencia)}
+          </b>
+        </div>
+      </div>
     </div>
   );
 }
