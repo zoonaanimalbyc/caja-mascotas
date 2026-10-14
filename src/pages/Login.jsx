@@ -102,7 +102,7 @@ export default function Login({ onLogin }) {
           </option>
           {admins.map(a => (
             <option key={a.email} value={a.email}>
-              {a.nombre} ({a.rol})
+            {a.nombre} ({(a.roles || []).join(', ')})
             </option>
           ))}
         </select>
