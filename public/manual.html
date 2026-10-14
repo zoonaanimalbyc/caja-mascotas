@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capacitación - Arqueos Zoona</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --verde-oscuro: #1F4A2C;
+    --verde-medio: #3F7D4F;
+    --verde-claro: #E5F0E0;
+    --mostaza: #C4B234;
+    --mostaza-clara: #F2EEA8;
+    --crema: #FAF7F0;
+    --blanco: #FFFFFF;
+    --tinta: #1F2937;
+    --tinta-suave: #6B7280;
+    --linea: #E5E7EB;
+    --peligro: #B4553F;
+    --exito: #4A8B5E;
+    --sombra: 0 4px 16px rgba(31, 74, 44, 0.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    background: var(--crema);
+    color: var(--tinta);
+    line-height: 1.65;
+    font-size: 16px;
+    padding-bottom: 60px;
+  }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, var(--verde-oscuro), var(--verde-medio));
+    color: var(--blanco);
+    padding: 40px 24px;
+    margin-bottom: 40px;
+    position: relative;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, var(--verde-oscuro), var(--mostaza), var(--verde-medio));
+  }
+  .header-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .logo {
+    width: 80px;
+    height: 80px;
+    background: white;
+    border-radius: 50%;
+    padding: 4px;
+    object-fit: contain;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  }
+  .header h1 {
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+  }
+  .header p { font-size: 15px; opacity: 0.9; }
+
+  /* INTRO */
+  .intro-box {
+    background: var(--blanco);
+    border-radius: 20px;
+    padding: 28px 32px;
+    box-shadow: var(--sombra);
+    margin-bottom: 40px;
+    border-left: 5px solid var(--mostaza);
+  }
+  .intro-box h2 {
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 22px;
+    color: var(--verde-oscuro);
+    margin-bottom: 12px;
+  }
+
+  /* MÓDULOS */
+  .modulo {
+    background: var(--blanco);
+    border-radius: 20px;
+    margin-bottom: 28px;
+    overflow: hidden;
+    box-shadow: var(--sombra);
+    transition: all 0.3s;
+  }
+  .modulo-header {
+    background: linear-gradient(135deg, var(--verde-oscuro), var(--verde-medio));
+    color: white;
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .modulo-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    font-size: 22px;
+    font-weight: 800;
+    font-family: 'IBM Plex Mono', monospace;
+    flex-shrink: 0;
+  }
+  .modulo-header h2 {
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0;
+  }
+  .modulo-header p {
+    font-size: 14px;
+    opacity: 0.85;
+    margin-top: 2px;
+  }
+
+  .modulo-body { padding: 32px; }
+
+  .modulo-body h3 {
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 18px;
+    color: var(--verde-oscuro);
+    margin: 24px 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .modulo-body h3:first-child { margin-top: 0; }
+
+  .modulo-body p { margin-bottom: 14px; font-size: 15.5px; }
+
+  .modulo-body ol, .modulo-body ul {
+    margin: 12px 0 18px 24px;
+  }
+  .modulo-body li { margin-bottom: 8px; font-size: 15.5px; }
+
+  /* EJERCICIOS */
+  .ejercicio {
+    background: linear-gradient(135deg, #F0F8EC, var(--verde-claro));
+    border-left: 4px solid var(--verde-medio);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .ejercicio h4 {
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 15px;
+    color: var(--verde-oscuro);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ejercicio ol { margin-left: 20px; }
+  .ejercicio li { margin-bottom: 6px; font-size: 14.5px; }
+
+  /* ALERTAS */
+  .alerta {
+    background: linear-gradient(135deg, #FFF8E5, #FEF3C7);
+    border-left: 4px solid var(--mostaza);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin: 20px 0;
+    color: #78350F;
+  }
+  .alerta strong {
+    display: block;
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
+
+  .peligro {
+    background: linear-gradient(135deg, #FBEEEA, #FECACA);
+    border-left: 4px solid var(--peligro);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin: 20px 0;
+    color: #7F1D1D;
+  }
+  .peligro strong {
+    display: block;
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
+
+  /* TABLA */
+  .tabla {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 20px 0;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .tabla th {
+    background: linear-gradient(180deg, var(--verde-claro), #D5E5CE);
+    padding: 12px 16px;
+    text-align: left;
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 13px;
+    color: var(--verde-oscuro);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .tabla td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--linea);
+    font-size: 14.5px;
+  }
+  .tabla tr:last-child td { border-bottom: none; }
+
+  /* CHECKLIST */
+  .checklist {
+    background: var(--crema);
+    border-radius: 14px;
+    padding: 22px 26px;
+    margin: 24px 0;
+  }
+  .checklist h4 {
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 16px;
+    color: var(--verde-oscuro);
+    margin-bottom: 14px;
+  }
+  .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--linea);
+  }
+  .check-item:last-child { border-bottom: none; }
+  .check-box {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--verde-medio);
+    border-radius: 6px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 800;
+    color: transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 2px;
+  }
+  .check-box.checked {
+    background: var(--verde-medio);
+    color: white;
+  }
+  .check-text {
+    flex: 1;
+    font-size: 14.5px;
+    cursor: pointer;
+  }
+  .check-text.done {
+    text-decoration: line-through;
+    color: var(--tinta-suave);
+  }
+
+  /* BOTONES */
+  .botones-header {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 22px;
+    background: linear-gradient(135deg, var(--verde-medio), var(--verde-oscuro));
+    color: white;
+    text-decoration: none;
+    border-radius: 12px;
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(31, 74, 44, 0.2);
+  }
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(31, 74, 44, 0.3);
+  }
+  .btn-mostaza {
+    background: linear-gradient(135deg, var(--mostaza), #A89A28);
+    color: var(--verde-oscuro);
+  }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    padding: 32px 24px;
+    color: var(--tinta-suave);
+    font-size: 13px;
+    margin-top: 40px;
+    border-top: 1px solid var(--linea);
+  }
+
+  @media print {
+    body { background: white; padding: 0; }
+    .header { background: var(--verde-oscuro) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .btn, .botones-header { display: none !important; }
+    .modulo { box-shadow: none; border: 1px solid var(--linea); page-break-inside: avoid; }
+    .check-box { border-color: #999; }
+  }
+
+  @media (max-width: 640px) {
+    .container { padding: 20px 16px; }
+    .modulo-body { padding: 22px; }
+    .modulo-header { padding: 18px 22px; }
+    .modulo-header h2 { font-size: 20px; }
+    .modulo-num { width: 40px; height: 40px; font-size: 18px; }
+    .header h1 { font-size: 26px; }
+    .logo { width: 60px; height: 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <img src="/caja-mascotas/logo.png" alt="Zoona" class="logo" onerror="this.style.display='none'">
+    <div>
+      <h1>Capacitación</h1>
+      <p>Arqueos Zoona Animal · Aprende a usar la app</p>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="botones-header" style="margin-bottom:32px;">
+    <button class="btn" onclick="window.print()">🖨️ Descargar como PDF</button>
+    <a href="/caja-mascotas/manual.html" class="btn btn-mostaza">📖 Ir al manual</a>
+    <a href="/caja-mascotas/" class="btn">← Volver a la app</a>
+  </div>
+
+  <div class="intro-box">
+    <h2>🎓 Bienvenido a la capacitación</h2>
+    <p>Esta capacitación te llevará paso a paso por todas las funciones de la app. Está dividida en <strong>6 módulos</strong>. Cada módulo tiene ejercicios prácticos y un checklist al final.</p>
+    <p><strong>Tiempo estimado:</strong> 45-60 minutos.</p>
+    <p style="margin-top:16px;">
+      <strong>Recomendación:</strong> ten la app abierta en otra pestaña o en tu celular mientras haces la capacitación.
+    </p>
+  </div>
+
+  <!-- MÓDULO 1 -->
+  <div class="modulo">
+    <div class="modulo-header">
+      <span class="modulo-num">01</span>
+      <div>
+        <h2>Conocer la app</h2>
+        <p>Introducción y conceptos básicos</p>
+      </div>
+    </div>
+    <div class="modulo-body">
+      <h3>🎯 ¿Qué es Arqueos Zoona?</h3>
+      <p>Es una app web para llevar el control del efectivo de la tienda y el SPA. Reemplaza el antiguo Excel y automatiza:</p>
+      <ul>
+        <li>Registro de apertura y cierre de turnos</li>
+        <li>Registro de movimientos (egresos, ingresos, fletes, spa)</li>
+        <li>Cálculo automático del estado de caja en vivo</li>
+        <li>Detección de descuadres</li>
+        <li>Envío de reportes por email a los admins</li>
+      </ul>
+
+      <h3>🏠 Conocer las pantallas</h3>
+      <p>La app tiene 4 pantallas principales:</p>
+      <ul>
+        <li><strong>Registrar:</strong> aquí operas la caja (abrir/cerrar turno, movimientos, arqueos).</li>
+        <li><strong>Hoy:</strong> resumen del día en tiempo real.</li>
+        <li><strong>Historial:</strong> días anteriores.</li>
+        <li><strong>Dashboard:</strong> solo admin, con gráficos y reportes.</li>
+      </ul>
+
+      <h3>🔐 Roles y permisos</h3>
+      <table class="tabla">
+        <thead>
+          <tr><th>Rol</th><th>Puede hacer</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>👤 Cajero</td><td>Operar la caja, arqueos, movimientos, cierres</td></tr>
+          <tr><td>👁 Supervisor</td><td>Todo lo del cajero + aprobar descuadres</td></tr>
+          <tr><td>🔑 Admin</td><td>Todo + gestión, dashboard, reportes</td></tr>
+        </tbody>
+      </table>
+
+      <div class="ejercicio">
+        <h4>✏️ Ejercicio 1</h4>
+        <ol>
+          <li>Abre la app en tu celular o PC.</li>
+          <li>Ingresa con tu PIN.</li>
+          <li>Navega entre las 4 pestañas (Registrar, Hoy, Historial, Dashboard si eres admin).</li>
+          <li>Identifica en qué pantalla estás en cada momento.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- MÓDULO 2 -->
+  <div class="modulo">
+    <div class="modulo-header">
+      <span class="modulo-num">02</span>
+      <div>
+        <h2>Flujo diario del cajero</h2>
+        <p>El ciclo completo de un día de trabajo</p>
+      </div>
+    </div>
+    <div class="modulo-body">
+      <h3>🌅 Paso 1 — Abrir el turno 1</h3>
+      <ol>
+        <li>Entra a <strong>Registrar</strong>.</li>
+        <li>Verás <strong>🌅 Es hora de abrir el turno 1</strong>.</li>
+        <li>Toca el botón.</li>
+        <li>Cuenta los billetes y monedas con los que arranca el día.</li>
+        <li>Escribe la cantidad de cada denominación.</li>
+        <li>Verifica el <strong>TOTAL CONTADO</strong>.</li>
+        <li>Confirma con <strong>✔ Abrir turno 1</strong>.</li>
+      </ol>
+
+      <h3>💸 Paso 2 — Registrar movimientos</h3>
+      <p>Cada vez que entra o sale plata:</p>
+      <ol>
+        <li>Toca <strong>💸 Movimiento</strong>.</li>
+        <li>Elige el tipo (Ingreso, Egreso, Flete, SPA, SPA QR).</li>
+        <li>Escribe la descripción.</li>
+        <li>Escribe el valor.</li>
+        <li>Guarda con tu PIN.</li>
+      </ol>
+
+      <h3>💵 Paso 3 — Arqueos parciales (opcional pero recomendado)</h3>
+      <ol>
+        <li>Cada 2 horas, toca <strong>💵 Arqueo parcial</strong>.</li>
+        <li>Cuenta el efectivo actual.</li>
+        <li><strong>Consulta en SIIGO</strong> las ventas en efectivo acumuladas del turno.</li>
+        <li>Escribe ese valor en el campo correspondiente.</li>
+        <li>Guarda.</li>
+        <li>Verifica el <strong>estado en vivo</strong>: verde/rojo/amarillo.</li>
+      </ol>
+
+      <h3>🌙 Paso 4 — Cerrar el turno 1</h3>
+      <ol>
+        <li>Toca <strong>🌙 Cerrar turno 1</strong>.</li>
+        <li>Cuenta TODO el efectivo del turno.</li>
+        <li>Consulta en SIIGO las ventas en efectivo totales del turno 1.</li>
+        <li>Escribe ese valor.</li>
+        <li>Cierra el turno.</li>
+        <li>Revisa el resultado: 🟢 o 🔴.</li>
+      </ol>
+
+      <h3>🌇 Paso 5 — Abrir el turno 2</h3>
+      <p>El segundo cajero hace el mismo proceso del Paso 1, pero cuenta el efectivo que recibió del turno 1.</p>
+
+      <h3>🌆 Paso 6 — Operar turno 2</h3>
+      <p>Igual que los Pasos 2, 3 y 4.</p>
+
+      <div class="alerta">
+        <strong>⚠️ Regla del día</strong>
+        Hasta que no se cierre el turno 1, no se puede abrir el turno 2. Hasta que no se cierre el turno 2, no se puede cerrar el día.
+      </div>
+
+      <div class="ejercicio">
+        <h4>✏️ Ejercicio 2</h4>
+        <ol>
+          <li>Abre el turno 1 con un valor de prueba.</li>
+          <li>Registra un movimiento de cada tipo.</li>
+          <li>Haz un arqueo parcial con el mismo valor que abriste.</li>
+          <li>Verifica que el estado en vivo coincida.</li>
+          <li>Cierra el turno 1.</li>
+          <li>Abre el turno 2 y repite.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- MÓDULO 3 -->
+  <div class="modulo">
+    <div class="modulo-header">
+      <span class="modulo-num">03</span>
+      <div>
+        <h2>Movimientos de caja</h2>
+        <p>Tipos y cómo usarlos correctamente</p>
+      </div>
+    </div>
+    <div class="modulo-body">
+      <h3>📋 Los 5 tipos de movimiento</h3>
+
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Cuándo usar</th>
+            <th>Ejemplo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>💰 <strong>Ingreso</strong></td>
+            <td>Cuando entra plata que no es venta</td>
+            <td>Cliente devuelve un anticipo, cobro pendiente</td>
+          </tr>
+          <tr>
+            <td>📤 <strong>Egreso</strong></td>
+            <td>Cuando sale plata de la caja</td>
+            <td>Pago a proveedor, papelería, aseo</td>
+          </tr>
+          <tr>
+            <td>🛵 <strong>Flete</strong></td>
+            <td>Cuando pagas a un domiciliario</td>
+            <td>Domicilio factura 45100 por $9.000</td>
+          </tr>
+          <tr>
+            <td>💆 <strong>SPA</strong></td>
+            <td>Cuando trasladas efectivo de tienda a caja del SPA</td>
+            <td>Cliente pagó baño en efectivo, el dinero es del SPA</td>
+          </tr>
+          <tr>
+            <td>📱 <strong>SPA QR</strong></td>
+            <td>Cuando un cliente pagó el SPA por transferencia</td>
+            <td>Se registra para saber que ese pago no entró a caja</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>🎯 Regla de oro</h3>
+      <div class="alerta">
+        <strong>💡 ¿Cuál elegir?</strong>
+        <ul style="margin-left:20px;margin-top:8px;">
+          <li>Si la plata <strong>entra</strong> a la caja y <strong>no es venta</strong> → <strong>Ingreso</strong></li>
+          <li>Si la plata <strong>sale</strong> de la caja → <strong>Egreso</strong></li>
+          <li>Si es pago a un domiciliario → <strong>Flete</strong></li>
+          <li>Si es plata del SPA que estaba en la caja de tienda → <strong>SPA</strong></li>
+          <li>Si es pago del SPA por transferencia → <strong>SPA QR</strong></li>
+        </ul>
+      </div>
+
+      <div class="ejercicio">
+        <h4>✏️ Ejercicio 3</h4>
+        <p>Clasifica estos casos:</p>
+        <ol>
+          <li>Un cliente paga $50.000 en efectivo por un baño para su perro en el SPA. → ¿Qué tipo?</li>
+          <li>Pagas $12.000 a un domiciliario por entregar comida. → ¿Qué tipo?</li>
+          <li>Un cliente te paga $200.000 por un pedido que no retiró y ahora sí viene. → ¿Qué tipo?</li>
+          <li>Compras bolsas para empacar por $80.000. → ¿Qué tipo?</li>
+          <li>Un cliente paga un baño por QR a la cuenta de la tienda. → ¿Qué tipo?</li>
+        </ol>
+        <p style="margin-top:12px;font-size:13.5px;color:#6B7280;"><em>Respuestas: 1) SPA · 2) Flete · 3) Ingreso · 4) Egreso · 5) SPA QR</em></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MÓDULO 4 -->
+  <div class="modulo">
+    <div class="modulo-header">
+      <span class="modulo-num">04</span>
+      <div>
+        <h2>Arqueos</h2>
+        <p>Contar efectivo y usar el estado en vivo</p>
+      </div>
+    </div>
+    <div class="modulo-body">
+      <h3>💵 ¿Qué es un arqueo?</h3>
+      <p>Es contar todos los billetes y monedas que hay en caja. Se hace 3 veces:</p>
+      <ul>
+        <li><strong>Apertura:</strong> al abrir el turno (obligatorio).</li>
+        <li><strong>Parcial:</strong> cada 2 horas (recomendado).</li>
+        <li><strong>Cierre:</strong> al cerrar el turno (obligatorio).</li>
+      </ul>
+
+      <h3>🔢 Cómo contar billetes y monedas</h3>
+      <ol>
+        <li>Separa los billetes y monedas por denominación.</li>
+        <li>Cuenta cuántos hay de cada uno.</li>
+        <li>En la app, escribe la cantidad en cada fila.</li>
+        <li>El sistema multiplica automáticamente y suma el total.</li>
+      </ol>
+
+      <h3>📊 El estado en vivo del turno</h3>
+      <p>Después de cada arqueo, la app muestra una tarjeta con:</p>
+      <ul>
+        <li><strong>Saldo inicial:</strong> el efectivo con el que abriste.</li>
+        <li><strong>Ventas SIIGO:</strong> el último valor que consultaste en SIIGO.</li>
+        <li><strong>+ Ingresos / − Egresos / − Fletes / − SPA:</strong> los movimientos del turno.</li>
+        <li><strong>ESPERADO AHORA:</strong> el cálculo de cuánto debería haber.</li>
+        <li><strong>Contado:</strong> el total del último arqueo.</li>
+        <li><strong>DIFERENCIA:</strong> la resta entre contado y esperado.
+          <ul>
+            <li>🟢 <strong>Verde:</strong> cuadra ($0 diferencia)</li>
+            <li>🔴 <strong>Rojo:</strong> falta dinero</li>
+            <li>🟡 <strong>Amarillo:</strong> sobra dinero</li>
+          </ul>
+        </li>
+      </ul>
+
+      <div class="ejercicio">
+        <h4>✏️ Ejercicio 4</h4>
+        <ol>
+          <li>Con el turno abierto, haz un arqueo parcial.</li>
+          <li>Consulta en SIIGO las ventas del turno y escríbelas.</li>
+          <li>Observa el estado en vivo.</li>
+          <li>Registra un movimiento de Egreso de prueba por $10.000.</li>
+          <li>Vuelve a hacer un arqueo con el mismo efectivo que antes.</li>
+          <li>Observa cómo el "esperado" cambia y aparece la diferencia.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- MÓDULO 5 -->
+  <div class="modulo">
+    <div class="modulo-header">
+      <span class="modulo-num">05</span>
+      <div>
+        <h2>Cierre y descuadres</h2>
+        <p>Qué hacer cuando algo no cuadra</p>
+      </div>
+    </div>
+    <div class="modulo-body">
+      <h3>🌙 El cierre del turno</h3>
+      <p>Es el último arqueo del turno. Se hace antes de entregarle la caja al siguiente cajero o antes de cerrar el local.</p>
+
+      <h3>🟢 Si el turno cuadra</h3>
+      <p>¡Perfecto! Todo está bien. Puedes continuar con el siguiente turno o cerrar el día.</p>
+
+      <h3>🔴 Si hay descuadre</h3>
+      <p>Aparece con fondo rojo y muestra la diferencia exacta.</p>
+
+      <h3>🎯 ¿Qué hacer si hay descuadre?</h3>
+      <ol>
+        <li><strong>Verifica el conteo:</strong> vuelve a contar todo, por si hay error.</li>
+        <li><strong>Revisa los movimientos:</strong> ¿falta registrar alguno? ¿hay alguno mal escrito?</li>
+        <li><strong>Consulta con SIIGO:</strong> verifica que las ventas reportadas sean correctas.</li>
+        <li><strong>Reporta al admin:</strong> si después de revisar sigue descuadrando.</li>
+      </ol>
+
+      <h3>✅ ¿Qué pasa con el descuadre?</h3>
+      <ul>
+        <li>Queda registrado en el Sheet.</li>
+        <li>Si es el <strong>turno 2</strong>, el admin recibe email inmediatamente.</li>
+        <li>El admin lo revisa desde el Dashboard y decide:
+          <ul>
+            <li><strong>Aprobar:</strong> acepta la diferencia.</li>
+            <li><strong>Rechazar:</strong> sigue abierto.</li>
+            <li><strong>Corregir:</strong> lo marca como corregido.</li>
+          </ul>
+        </li>
+      </ul>
+
+      <div class="peligro">
+        <strong>🚨 Reglas importantes</strong>
+        <ul style="margin-left:20px;margin-top:8px;">
+          <li>El cajero <strong>siempre puede cerrar</strong>, incluso con descuadre. No se bloquea.</li>
+          <li>Solo se puede corregir un descuadre <strong>el mismo día</strong>.</li>
+          <li>El descuadre <strong>no se arrastra</strong> al día siguiente. El nuevo día empieza con el efectivo contado.</li>
+        </ul>
+      </div>
+
+      <div class="ejercicio">
+        <h4>✏️ Ejercicio 5</h4>
+        <ol>
+          <li>Con el turno abierto, cierra con un conteo menor al esperado.</li>
+          <li>Observa el resultado: 🔴 Descuadre.</li>
+          <li>Como admin, ve al Dashboard y verás la sección de descuadres pendientes.</li>
+          <li>Prueba aprobar uno con PIN de admin.</li>
+          <li>Verifica que desaparece de la lista.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- MÓDULO 6 -->
+  <div class="modulo">
+    <div class="modulo-header">
+      <span class="modulo-num">06</span>
+      <div>
+        <h2>Módulo para administradores</h2>
+        <p>Dashboard, reportes y gestión</p>
+      </div>
+    </div>
+    <div class="modulo-body">
+      <h3>📊 El Dashboard</h3>
+      <p>Es la pantalla más importante para el admin. Muestra:</p>
+
+      <h4>KPIs (tarjetas de resumen)</h4>
+      <ul>
+        <li><strong>Ventas totales:</strong> del rango seleccionado.</li>
+        <li><strong>Turnos:</strong> cuántos turnos cerrados.</li>
+        <li><strong>Descuadres:</strong> cuántos hubo.</li>
+        <li><strong>Top cajero:</strong> quién vendió más.</li>
+      </ul>
+
+      <h4>Filtros de fecha</h4>
+      <ul>
+        <li><strong>Hoy</strong></li>
+        <li><strong>Esta semana</strong></li>
+        <li><strong>Este mes</strong></li>
+        <li><strong>Personalizado</strong> (elegir desde/hasta)</li>
+      </ul>
+
+      <h4>Gráficos</h4>
+      <ul>
+        <li>👥 Ventas por cajero</li>
+        <li>💸 Movimientos por tipo</li>
+        <li>📈 Ventas y diferencias por día</li>
+      </ul>
+
+      <h3>📄 Reportes descargables</h3>
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Botón</th>
+            <th>Qué genera</th>
+            <th>Formato</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>📄 Reporte del día</td>
+            <td>Arqueos, movimientos y cierre del día actual</td>
+            <td>PDF</td>
+          </tr>
+          <tr>
+            <td>📊 Reporte del rango</td>
+            <td>Todos los cierres del rango seleccionado</td>
+            <td>Excel</td>
+          </tr>
+          <tr>
+            <td>👤 Reporte por cajero</td>
+            <td>Historial de un cajero o de todos</td>
+            <td>PDF</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>🔴 Revisar descuadres</h3>
+      <p>Desde el Dashboard:</p>
+      <ol>
+        <li>Busca la sección <strong>🔴 Descuadres pendientes de revisión</strong>.</li>
+        <li>Toca el botón de acción:
+          <ul>
+            <li><strong>✔ Aprobar:</strong> acepta el descuadre.</li>
+            <li><strong>✖ Rechazar:</strong> deja abierto.</li>
+            <li><strong>🔧 Corregir:</strong> marca como corregido.</li>
+          </ul>
+        </li>
+        <li>Ingresa tu PIN de admin.</li>
+        <li>Agrega un comentario explicando la decisión.</li>
+        <li>Confirma.</li>
+      </ol>
+
+      <h3>📜 Historial</h3>
+      <p>Para ver días anteriores:</p>
+      <ol>
+        <li>Ve a <strong>Historial</strong>.</li>
+        <li>Elige un rango de fechas.</li>
+        <li>Filtra por cajero si quieres.</li>
+        <li>Toca el día para expandirlo.</li>
+        <li>Toca <strong>👁 Ver</strong> para ver el detalle completo del turno.</li>
+      </ol>
+
+      <h3>📧 Notificaciones automáticas</h3>
+      <ul>
+        <li><strong>Email por descuadre:</strong> cada vez que hay un descuadre en el turno 2.</li>
+        <li><strong>Email diario:</strong> a las 9pm, resumen del día.</li>
+        <li><strong>Backup automático:</strong> a las 11pm, copia del Sheet en tu Drive.</li>
+      </ul>
+
+      <div class="ejercicio">
+        <h4>✏️ Ejercicio 6</h4>
+        <ol>
+          <li>Entra como admin.</li>
+          <li>Ve al Dashboard.</li>
+          <li>Prueba los 4 filtros de fecha.</li>
+          <li>Descarga los 3 reportes (día, rango, cajero).</li>
+          <li>Ve al Historial y consulta un día anterior.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHECKLIST FINAL -->
+  <div class="modulo">
+    <div class="modulo-header">
+      <span class="modulo-num">✓</span>
+      <div>
+        <h2>Checklist de la capacitación</h2>
+        <p>Marca cada punto cuando lo hayas completado</p>
+      </div>
+    </div>
+    <div class="modulo-body">
+      <p>Toca cada casilla para marcarla como completada. Puedes imprimir esta página para llevar el registro.</p>
+
+      <div class="checklist">
+        <h4>Módulo 1 — Conocer la app</h4>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Abrí la app y me logueé con mi PIN.</span>
+        </div>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Navegué entre las 4 pestañas.</span>
+        </div>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Entiendo mi rol y mis permisos.</span>
+        </div>
+      </div>
+
+      <div class="checklist">
+        <h4>Módulo 2 — Flujo diario</h4>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Abrí el turno 1 con un conteo real.</span>
+        </div>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Registré al menos 3 movimientos distintos.</span>
+        </div>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Hice un arqueo parcial con ventas SIIGO.</span>
+        </div>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Cerré el turno 1 y abrí el turno 2.</span>
+        </div>
+      </div>
+
+      <div class="checklist">
+        <h4>Módulo 3 — Movimientos</h4>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Registré un Ingreso.</span>
+        </div>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Registré un Egreso.</span>
+        </div>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Registré un Flete.</span>
+        </div>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Registré un SPA y un SPA QR.</span>
+        </div>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Resolví bien el ejercicio 3.</span>
+        </div>
+      </div>
+
+      <div class="checklist">
+        <h4>Módulo 4 — Arqueos</h4>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Entiendo el estado en vivo del turno.</span>
+        </div>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Identifiqué las diferencias verde/rojo/amarillo.</span>
+        </div>
+      </div>
+
+      <div class="checklist">
+        <h4>Módulo 5 — Cierre y descuadres</h4>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Cerré un turno con descuadre a propósito.</span>
+        </div>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Aprobé un descuadre como admin.</span>
+        </div>
+      </div>
+
+      <div class="checklist">
+        <h4>Módulo 6 — Admin</h4>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Probé los 4 filtros del Dashboard.</span>
+        </div>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Descargué los 3 reportes.</span>
+        </div>
+        <div class="check-item">
+          <div class="check-box" onclick="toggleCheck(this)">✓</div>
+          <span class="check-text" onclick="toggleCheck(this.previousElementSibling)">Consulté el Historial de días anteriores.</span>
+        </div>
+      </div>
+
+      <div class="alerta" style="margin-top:24px;">
+        <strong>🎉 ¡Felicitaciones!</strong>
+        Si marcaste todos los checks, estás listo para operar Arqueos Zoona. Si algo no quedó claro, vuelve al módulo correspondiente o consulta el manual.
+      </div>
+    </div>
+  </div>
+
+  <div class="botones-header">
+    <button class="btn" onclick="window.print()">🖨️ Descargar como PDF</button>
+    <a href="/caja-mascotas/manual.html" class="btn btn-mostaza">📖 Ir al manual</a>
+    <a href="/caja-mascotas/" class="btn">← Volver a la app</a>
+  </div>
+
+  <div class="footer">
+    Capacitación Arqueos Zoona · Versión 1.0 · 2026
+  </div>
+
+</div>
+
+<script>
+function toggleCheck(el) {
+  // Si es la caja (div.check-box)
+  if (el.classList.contains('check-box')) {
+    el.classList.toggle('checked');
+    const text = el.nextElementSibling;
+    if (text) text.classList.toggle('done');
+  } else if (el.classList.contains('check-text')) {
+    // Si es el texto
+    el.classList.toggle('done');
+    const box = el.previousElementSibling;
+    if (box) box.classList.toggle('checked');
+  }
+}
+</script>
+
+</body>
+</html>
