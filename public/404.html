@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Arqueos Zoona</title>
+  <script>
+    // Redirigir cualquier ruta no encontrada al index con hash
+    const path = window.location.pathname.replace('/caja-mascotas', '');
+    window.location.replace('/caja-mascotas/#' + path);
+  </script>
+</head>
+<body>
+  <p>Redirigiendo…</p>
+</body>
+</html>
+
