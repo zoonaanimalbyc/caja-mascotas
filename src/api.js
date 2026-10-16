@@ -5,7 +5,7 @@ const cache = {
   usuarios: { data: null, ts: 0 },
   admins:   { data: null, ts: 0 },
 };
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+const CACHE_TTL = 5 * 60 * 1000;
 
 function getCache(key) {
   const c = cache[key];
@@ -24,10 +24,19 @@ function clearCache(key) {
 
 /* ---------- FETCH ---------- */
 async function call(action, payload = {}) {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action, ...payload }),
+  // Construir URL con TODOS los parámetros en query string
+  const params = new URLSearchParams({ action });
+  Object.entries(payload).forEach(([k, v]) => {
+    if (v !== undefined && v !== null) {
+      params.append(k, typeof v === 'object' ? JSON.stringify(v) : v);
+    }
+  });
+  const url = API_URL + '?' + params.toString();
+
+  const res = await fetch(url, {
+    method: 'GET',
+    mode: 'cors',
+    redirect: 'follow',
   });
 
   const text = await res.text();
@@ -58,7 +67,6 @@ export const api = {
   cerrarTurno:             (data)       => call('cerrarTurno', data),
   getEstadoTurnos:         (data)       => call('getEstadoTurnos', data),
 
-  // Con caché
   getUsuarios: async () => {
     const cached = getCache('usuarios');
     if (cached) return cached;
@@ -82,6 +90,5 @@ export const api = {
   getHistorial:            (data)       => call('getHistorial', data),
   getDetalleTurno:         (data)       => call('getDetalleTurno', data),
 
-  // Utilidad para limpiar el caché (llamar después de guardar)
   clearCache,
 };
