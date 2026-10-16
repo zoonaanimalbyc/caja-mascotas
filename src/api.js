@@ -5,7 +5,7 @@ const cache = {
   usuarios: { data: null, ts: 0 },
   admins:   { data: null, ts: 0 },
 };
-const CACHE_TTL = 5 * 60 * 1000;
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutos
 
 function getCache(key) {
   const c = cache[key];
@@ -24,7 +24,6 @@ function clearCache(key) {
 
 /* ---------- FETCH ---------- */
 async function call(action, payload = {}) {
-  // Construir URL con TODOS los parámetros en query string
   const params = new URLSearchParams({ action });
   Object.entries(payload).forEach(([k, v]) => {
     if (v !== undefined && v !== null) {

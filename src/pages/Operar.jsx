@@ -96,13 +96,11 @@ export default function Operar({ sede, user }) {
     async function cargar() {
       setLoad(true);
       try {
-        const [e, u, h] = await Promise.all([
+        const [e, h] = await Promise.all([
           api.getEstadoTurnos({ sede, fecha: hoy() }),
-          api.getUsuarios().catch(() => []),
           api.getHoy(sede, hoy()).catch(() => ({ arqueos: [], movimientos: [] })),
         ]);
         setEstado(e);
-        setUsuarios(u || []);
         setArqueosHoy(h.arqueos || []);
         setMovimientosHoy(h.movimientos || []);
       } catch (err) {
@@ -110,6 +108,8 @@ export default function Operar({ sede, user }) {
       } finally {
         setLoad(false);
       }
+      // Cargar usuarios aparte en background (no bloquea)
+      api.getUsuarios().then(setUsuarios).catch(() => {});
     }
     cargar();
   }, [sede, guardando]);
@@ -148,13 +148,11 @@ export default function Operar({ sede, user }) {
   async function recargar() {
     setLoad(true);
     try {
-      const [e, u, h] = await Promise.all([
+      const [e, h] = await Promise.all([
         api.getEstadoTurnos({ sede, fecha: hoy() }),
-        api.getUsuarios().catch(() => []),
         api.getHoy(sede, hoy()).catch(() => ({ arqueos: [], movimientos: [] })),
       ]);
       setEstado(e);
-      setUsuarios(u || []);
       setArqueosHoy(h.arqueos || []);
       setMovimientosHoy(h.movimientos || []);
     } catch (err) {
@@ -181,6 +179,7 @@ export default function Operar({ sede, user }) {
   };
 
   function intentarGuardarMovimiento() {
+    if (guardandoPin) return;
     if (!movTipo) { setError('⚠️ Debes elegir un tipo de movimiento'); return; }
     if (!movDesc || !movDesc.trim()) { setError('⚠️ La descripción es obligatoria'); return; }
     const v = Number(movValor || 0);
@@ -191,6 +190,7 @@ export default function Operar({ sede, user }) {
   function cerrarPinModal() { setPinModalAbierto(false); setPin(''); setPinError(''); }
 
   async function confirmarPin() {
+    if (guardandoPin) return;
     if (!pin || pin.length < 4) { setPinError('Ingresa tu PIN'); return; }
     setGuardandoPin(true); setPinError('');
     try {
@@ -210,6 +210,7 @@ export default function Operar({ sede, user }) {
   }
 
   async function abrirTurno() {
+    if (guardando) return;
     if (totalContado === 0) { setError('Debes contar al menos un billete o moneda'); return; }
     setGuardando(true);
     try {
@@ -231,6 +232,7 @@ export default function Operar({ sede, user }) {
   }
 
   async function guardarArqueo() {
+    if (guardando) return;
     if (totalContado === 0) { setError('Debes ingresar al menos una cantidad'); return; }
     setGuardando(true);
     try {
@@ -249,6 +251,7 @@ export default function Operar({ sede, user }) {
   }
 
   async function cerrarTurno() {
+    if (guardando) return;
     const ventasNum = Number(ventas || 0);
     if (ventasNum < 0) { setError('Las ventas no pueden ser negativas'); return; }
     if (ventasNum > LIMITE_VENTAS) { setError(`Las ventas no pueden pasar de ${fmt(LIMITE_VENTAS)}.`); return; }
@@ -310,7 +313,7 @@ export default function Operar({ sede, user }) {
             <div className="card-estado card-accion">
               <h3>🌅 Es hora de abrir el turno 1</h3>
               <p>Cuenta los billetes y monedas con los que arranca el día.</p>
-              <button className="btn-guardar"
+              <button className="btn-guardar" disabled={guardando}
                 onClick={() => { setTurnoActivo(1); resetForms(); setVista('abrir'); }}>
                 🔓 Abrir turno 1
               </button>
@@ -323,9 +326,9 @@ export default function Operar({ sede, user }) {
               <p>Abierto por <b>{estadoTurno.usuario}</b> a las {estadoTurno.horaApertura}</p>
               <EstadoTurno estado={estadoTurno} />
               <div className="grid-botones">
-                <button onClick={() => { setVista('arqueo'); resetForms(); }}>💵 Arqueo parcial</button>
-                <button onClick={() => { setVista('movimiento'); resetForms(); }}>💸 Movimiento</button>
-                <button className="btn-acento"
+                <button disabled={guardando} onClick={() => { setVista('arqueo'); resetForms(); }}>💵 Arqueo parcial</button>
+                <button disabled={guardando} onClick={() => { setVista('movimiento'); resetForms(); }}>💸 Movimiento</button>
+                <button className="btn-acento" disabled={guardando}
                   onClick={() => { setTurnoActivo(1); resetForms(); setVista('cerrar'); }}>
                   🌙 Cerrar turno 1
                 </button>
@@ -337,7 +340,7 @@ export default function Operar({ sede, user }) {
             <div className="card-estado card-accion">
               <h3>🌇 Es hora de abrir el turno 2</h3>
               <p>Cuenta el efectivo que recibiste del turno 1. Debería ser: <b>{fmt(t1.cierre.contado)}</b></p>
-              <button className="btn-guardar"
+              <button className="btn-guardar" disabled={guardando}
                 onClick={() => { setTurnoActivo(2); resetForms(); setVista('abrir'); }}>
                 🔓 Abrir turno 2
               </button>
@@ -353,9 +356,9 @@ export default function Operar({ sede, user }) {
               )}
               <EstadoTurno estado={estadoTurno} />
               <div className="grid-botones">
-                <button onClick={() => { setVista('arqueo'); resetForms(); }}>💵 Arqueo parcial</button>
-                <button onClick={() => { setVista('movimiento'); resetForms(); }}>💸 Movimiento</button>
-                <button className="btn-acento"
+                <button disabled={guardando} onClick={() => { setVista('arqueo'); resetForms(); }}>💵 Arqueo parcial</button>
+                <button disabled={guardando} onClick={() => { setVista('movimiento'); resetForms(); }}>💸 Movimiento</button>
+                <button className="btn-acento" disabled={guardando}
                   onClick={() => { setTurnoActivo(2); resetForms(); setVista('cerrar'); }}>
                   🌙 Cerrar turno 2 (fin del día)
                 </button>
@@ -395,9 +398,9 @@ export default function Operar({ sede, user }) {
           </div>
           {error && <p className="err">{error}</p>}
           <div className="acciones-arqueo">
-            <button className="btn-secundario" onClick={() => setVista('menu')}>← Volver</button>
+            <button className="btn-secundario" disabled={guardando} onClick={() => setVista('menu')}>← Volver</button>
             <button className="btn-guardar" onClick={abrirTurno} disabled={guardando}>
-              {guardando ? 'Abriendo…' : `✔ Abrir turno ${turnoActivo} con ${fmt(totalContado)}`}
+              {guardando ? '⏳ Abriendo… espera' : `✔ Abrir turno ${turnoActivo} con ${fmt(totalContado)}`}
             </button>
           </div>
         </>
@@ -437,9 +440,9 @@ export default function Operar({ sede, user }) {
           <textarea value={obs} onChange={e => setObs(e.target.value)} rows="2" />
           {error && <p className="err">{error}</p>}
           <div className="acciones-arqueo">
-            <button className="btn-secundario" onClick={() => setVista('menu')}>← Volver</button>
+            <button className="btn-secundario" disabled={guardando} onClick={() => setVista('menu')}>← Volver</button>
             <button className="btn-guardar" onClick={guardarArqueo} disabled={guardando}>
-              {guardando ? 'Guardando…' : '💾 Guardar arqueo'}
+              {guardando ? '⏳ Guardando… espera' : '💾 Guardar arqueo'}
             </button>
           </div>
         </>
@@ -464,8 +467,10 @@ export default function Operar({ sede, user }) {
           )}
           {error && <p className="err">{error}</p>}
           <div className="acciones-arqueo">
-            <button className="btn-secundario" onClick={() => setVista('menu')}>← Volver</button>
-            <button className="btn-guardar" onClick={intentarGuardarMovimiento}>💾 Guardar movimiento</button>
+            <button className="btn-secundario" disabled={guardandoPin} onClick={() => setVista('menu')}>← Volver</button>
+            <button className="btn-guardar" onClick={intentarGuardarMovimiento} disabled={guardandoPin}>
+              💾 Guardar movimiento
+            </button>
           </div>
         </>
       )}
@@ -500,9 +505,9 @@ export default function Operar({ sede, user }) {
           <textarea value={obs} onChange={e => setObs(e.target.value)} rows="2" />
           {error && <p className="err">{error}</p>}
           <div className="acciones-arqueo">
-            <button className="btn-secundario" onClick={() => setVista('menu')}>← Volver</button>
+            <button className="btn-secundario" disabled={guardando} onClick={() => setVista('menu')}>← Volver</button>
             <button className="btn-guardar" onClick={cerrarTurno} disabled={guardando}>
-              {guardando ? 'Cerrando…' : `🌙 Cerrar turno ${turnoActivo}`}
+              {guardando ? '⏳ Cerrando… espera' : `🌙 Cerrar turno ${turnoActivo}`}
             </button>
           </div>
         </>
@@ -569,7 +574,7 @@ export default function Operar({ sede, user }) {
                 ))}
               </div>
               {pinError && <p className="err">{pinError}</p>}
-              {guardandoPin && <p className="info">Validando PIN…</p>}
+              {guardandoPin && <p className="info">⏳ Validando PIN… espera</p>}
             </div>
           </div>
         </div>

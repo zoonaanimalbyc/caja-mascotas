@@ -112,6 +112,11 @@ export default function App() {
 
   if (!user) return <Login onLogin={setUser} />;
 
+  // ---------- VERIFICAR SI EL USUARIO ES ADMIN O SUPERVISOR ----------
+  const roles = user.roles || [user.rol || ''];
+  const esAdminOSupervisor =
+    roles.includes('admin') || roles.includes('supervisor');
+
   const tabClass = (path) => {
     let activo;
     if (path === '/registrar') {
@@ -171,7 +176,7 @@ export default function App() {
         </a>
 
         <div className="user">
-          {user.nombre} · {(user.roles || [user.rol || '']).join(', ')}
+          {user.nombre} · {roles.join(', ')}
           <button onClick={() => { setUser(null); setGeoStatus(null); setBloqueoSede(null); nav('/'); }}>Salir</button>
         </div>
       </header>
@@ -183,7 +188,9 @@ export default function App() {
         </Link>
         <Link to="/hoy" className={tabClass('/hoy')}>🏠 Hoy</Link>
         <Link to="/historial" className={tabClass('/historial')}>📜 Historial</Link>
-        <Link to="/dashboard" className={tabClass('/dashboard')}>📊 Dashboard</Link>
+        {esAdminOSupervisor && (
+          <Link to="/dashboard" className={tabClass('/dashboard')}>📊 Dashboard</Link>
+        )}
       </nav>
 
       <main>
@@ -192,7 +199,11 @@ export default function App() {
           <Route path="/registrar" element={<Operar sede={sede} user={user} />} />
           <Route path="/hoy" element={<Hoy sede={sede} user={user} />} />
           <Route path="/historial" element={<Historial sede={sede} user={user} />} />
-          <Route path="/dashboard" element={<Dashboard sede={sede} user={user} />} />
+
+          {esAdminOSupervisor && (
+            <Route path="/dashboard" element={<Dashboard sede={sede} user={user} />} />
+          )}
+
           <Route path="/operar" element={<Navigate to="/registrar" replace />} />
           <Route path="*" element={<Navigate to="/registrar" replace />} />
         </Routes>
