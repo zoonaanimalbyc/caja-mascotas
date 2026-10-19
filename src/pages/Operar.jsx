@@ -36,6 +36,9 @@ export default function Operar({ sede, user }) {
   const [msg, setMsg] = useState('');
   const [guardando, setGuardando] = useState(false);
 
+  // --- NUEVO: Estado para el modal de turnos pendientes ---
+  const [pendientesModal, setPendientesModal] = useState(null);
+
   const t1 = estado?.turno1 || {};
   const t2 = estado?.turno2 || {};
   const diaCerrado = estado?.diaCerrado || false;
@@ -109,7 +112,6 @@ export default function Operar({ sede, user }) {
       } finally {
         setLoad(false);
       }
-      // Cargar usuarios aparte en background (no bloquea)
       api.getUsuarios().then(setUsuarios).catch(() => {});
     }
     cargar();
@@ -210,9 +212,26 @@ export default function Operar({ sede, user }) {
     } finally { setGuardandoPin(false); }
   }
 
+  // --- NUEVO: abrirTurno modificado para consultar pendientes ---
   async function abrirTurno() {
     if (guardando) return;
     if (totalContado === 0) { setError('Debes contar al menos un billete o moneda'); return; }
+    setGuardando(true);
+    try {
+      const pendientes = await api.getTurnosPendientes({ sede }).catch(() => []);
+      if (pendientes && pendientes.length > 0) {
+        setPendientesModal({ pendientes });
+        setGuardando(false);
+        return;
+      }
+      await ejecutarApertura(false, null);
+    } catch (e) { 
+      setError(e.message); 
+      setGuardando(false); 
+    }
+  }
+
+  async function ejecutarApertura(conPendiente, turnoPendienteId) {
     setGuardando(true);
     try {
       const arqueoPayload = {
@@ -226,10 +245,22 @@ export default function Operar({ sede, user }) {
         sede, fecha: hoy(), turno: turnoActivo,
         hora: hora(), usuario: user.nombre || user.email,
         contado: totalContado, observaciones: '',
+        apertura_con_pendiente: conPendiente,
+        turno_pendiente_id: turnoPendienteId,
       });
+      setPendientesModal(null);
       resetForms(); setVista('menu'); await recargar();
-    } catch (e) { setError(e.message); }
-    finally { setGuardando(false); }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  function continuarConPendiente() {
+    const turnoPendienteId = pendientesModal.pendientes[0]?.turno_id;
+    setPendientesModal(null);
+    ejecutarApertura(true, turnoPendienteId);
   }
 
   async function guardarArqueo() {
@@ -251,6 +282,7 @@ export default function Operar({ sede, user }) {
     finally { setGuardando(false); }
   }
 
+  // --- NUEVO: cerrarTurno modificado para enviar el turno_id ---
   async function cerrarTurno() {
     if (guardando) return;
     const ventasNum = Number(ventas || 0);
@@ -271,9 +303,14 @@ export default function Operar({ sede, user }) {
         usuario_email: user.nombre || user.email, observaciones: obs, hora: hora(),
       });
       setRes(r);
+
+      // Obtenemos el turno_id actual
+      const turnoIdActual = turnoActivo === 1 ? t1.apertura?.id : t2.apertura?.id;
+
       await api.cerrarTurno({
         sede, fecha: hoy(), turno: turnoActivo,
         hora: hora(), usuario: user.nombre || user.email,
+        turno_id: turnoIdActual, // Enviamos el id
       });
       setVista('resultado');
     } catch (e) { setError(e.message); }
@@ -580,6 +617,48 @@ export default function Operar({ sede, user }) {
           </div>
         </div>
       )}
+
+      {/* --- NUEVO MODAL DE TURNOS PENDIENTES --- */}
+      {pendientesModal && (
+        <div className="modal-overlay">
+          <div className="modal-box modal-pendientes" onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3>⚠️ Turno sin cerrar</h3>
+            </div>
+            <div className="modal-body">
+              <p className="info">
+                Antes de abrir un nuevo turno, ten en cuenta que hay
+                {pendientesModal.pendientes.length === 1 ? ' un turno' : ` ${pendientesModal.pendientes.length} turnos`} sin cerrar:
+              </p>
+              <ul style={{ textAlign: 'left', margin: '12px 0', paddingLeft: 20 }}>
+                {pendientesModal.pendientes.map(p => (
+                  <li key={p.turno_id} style={{ marginBottom: 8 }}>
+                    <b>Turno {p.turno}</b> del <b>{p.fecha}</b>
+                    <br />
+                    <small>
+                      Abierto por {p.usuario_apertura} a las {p.hora_apertura}
+                      <br />
+                      ID: <code style={{ fontSize: 11 }}>{p.turno_id}</code>
+                    </small>
+                  </li>
+                ))}
+              </ul>
+              <p className="info" style={{ fontSize: 13, color: '#B4553F' }}>
+                Se notificará al administrador. Puedes continuar con la apertura normal.
+              </p>
+            </div>
+            <div className="acciones-arqueo">
+              <button className="btn-secundario" onClick={() => setPendientesModal(null)}>
+                Cancelar
+              </button>
+              <button className="btn-guardar" onClick={continuarConPendiente} disabled={guardando}>
+                {guardando ? '⏳ Abriendo…' : 'Continuar de todos modos'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

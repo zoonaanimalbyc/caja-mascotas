@@ -57,6 +57,7 @@ export const api = {
   abrirTurno:              (data)       => call('abrirTurno', data),
   cerrarTurno:             (data)       => call('cerrarTurno', data),
   getEstadoTurnos:         (data)       => call('getEstadoTurnos', data),
+  getTurnosPendientes: (data) => call('getTurnosPendientes', data),
 
   getUsuarios: async () => {
     const cached = getCache('usuarios');
