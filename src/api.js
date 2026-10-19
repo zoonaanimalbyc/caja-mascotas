@@ -24,6 +24,21 @@ function clearCache(key) {
 
 /* ---------- FETCH ---------- */
 async function call(action, payload = {}) {
+  const isRead = action.startsWith('get') || action === 'ping';
+  const cacheKey = action + JSON.stringify(payload);
+  
+  // Si es una consulta (get), intentamos leer de la memoria del navegador primero
+  if (isRead) {
+    const localCache = sessionStorage.getItem(cacheKey);
+    if (localCache) {
+      const { data, ts } = JSON.parse(localCache);
+      // Si los datos tienen menos de 2 minutos de antigüedad, los usamos
+      if (Date.now() - ts < 120000) {
+        return data;
+      }
+    }
+  }
+
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -39,6 +54,17 @@ async function call(action, payload = {}) {
     throw new Error('El servidor no respondió correctamente.');
   }
   if (!j.ok) throw new Error(j.error || 'Error API');
+  
+  // Guardamos en la memoria del navegador si es una consulta
+  if (isRead) {
+    try {
+      sessionStorage.setItem(cacheKey, JSON.stringify({ data: j.data, ts: Date.now() }));
+    } catch (e) {}
+  } else {
+    // Si es una acción (guardar, abrir, cerrar), limpiamos la memoria para que traiga datos frescos
+    sessionStorage.clear();
+  }
+  
   return j.data;
 }
 
