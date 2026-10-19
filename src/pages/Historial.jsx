@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { hoyLocal, primerDiaMesAnteriorLocal } from '../utils/fechas';
 
-const hoyStr = () => new Date().toISOString().slice(0, 10);
+const hoyStr = () => hoyLocal();
 const fmt = n => '$' + Number(n || 0).toLocaleString('es-CO');
 
 export default function Historial({ sede, user }) {
   const [historial, setHistorial] = useState([]);
   const [cargando, setCargando] = useState(false);
-  const [desde, setDesde] = useState(() => {
+    const [desde, setDesde] = useState(() => {
     const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth() - 1, 1).toISOString().slice(0, 10);
-  });
+    return primerDiaMesAnteriorLocal(d);
+     });
   const [hasta, setHasta] = useState(hoyStr());
   const [filtroCajero, setFiltroCajero] = useState('');
   const [detalle, setDetalle] = useState(null);

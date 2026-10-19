@@ -7,8 +7,9 @@ import Historial from './pages/Historial';
 import Dashboard from './pages/Dashboard';
 import { api } from './api';
 import { detectarSede } from './utils/geo';
+import { hoyLocal } from './utils/fechas';
 
-const hoyStr = () => new Date().toISOString().slice(0, 10);
+const hoyStr = () => hoyLocal();
 
 export default function App() {
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user') || 'null'));

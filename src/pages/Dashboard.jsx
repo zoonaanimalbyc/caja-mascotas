@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { hoyLocal, primerDiaMesLocal, lunesDeEstaSemanaLocal } from '../utils/fechas';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
@@ -7,7 +8,7 @@ import {
 import { exportarPDFDia, exportarExcelMes, exportarPDFCajero } from '../utils/reportes';
 
 const CACHE_KEY = 'dashboard_cache_';
-const hoyStr = () => new Date().toISOString().slice(0, 10);
+const hoyStr = () => hoyLocal();
 const fmt = n => '$' + Number(n || 0).toLocaleString('es-CO');
 
 const COLORES = ['#1F4A2C', '#3F7D4F', '#C4B234', '#B4553F', '#4A8B5E', '#A89A28', '#2B5A3F'];
@@ -25,7 +26,7 @@ export default function Dashboard({ sede, user }) {
   const [rango, setRango] = useState('mes');
   const [desde, setDesde] = useState(() => {
     const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+    return primerDiaMesLocal(d);
   });
   const [hasta, setHasta] = useState(() => hoyStr());
 
@@ -36,12 +37,10 @@ export default function Dashboard({ sede, user }) {
       setDesde(hoyStr());
       setHasta(hoyStr());
     } else if (nuevoRango === 'semana') {
-      const lunes = new Date(hoy);
-      lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7));
-      setDesde(lunes.toISOString().slice(0, 10));
+      setDesde(lunesDeEstaSemanaLocal(hoy));
       setHasta(hoyStr());
     } else if (nuevoRango === 'mes') {
-      setDesde(new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10));
+      setDesde(primerDiaMesLocal(hoy));
       setHasta(hoyStr());
     }
   }

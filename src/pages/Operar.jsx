@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { DENOMS, TIPOS_MOV } from '../config';
 import { useRecordatorioArqueo, pedirPermisoNotificaciones, mostrarNotificacion } from '../utils/recordatorios';
+import { hoyLocal, horaLocal } from '../utils/fechas';
 
-const hoy = () => new Date().toISOString().slice(0, 10);
-const hora = () => new Date().toTimeString().slice(0, 5);
+const hoy = () => hoyLocal();
+const hora = () => horaLocal();
 const fmt = n => '$' + Number(n || 0).toLocaleString('es-CO');
 const LIMITE_VENTAS = 50000000;
 

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { hoyLocal } from '../utils/fechas';
 
-const hoy = () => new Date().toISOString().slice(0, 10);
+const hoy = () => hoyLocal();
 const fmt = n => '$' + Number(n || 0).toLocaleString('es-CO');
 
 const fmtHora = (h) => {
