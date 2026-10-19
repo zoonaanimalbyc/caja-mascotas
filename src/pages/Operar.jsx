@@ -36,7 +36,6 @@ export default function Operar({ sede, user }) {
   const [msg, setMsg] = useState('');
   const [guardando, setGuardando] = useState(false);
 
-  // --- NUEVO: Estado para el modal de turnos pendientes ---
   const [pendientesModal, setPendientesModal] = useState(null);
 
   const t1 = estado?.turno1 || {};
@@ -96,6 +95,7 @@ export default function Operar({ sede, user }) {
     };
   })();
 
+  // CARGA INICIAL (Solo se ejecuta al entrar a la pantalla o al cambiar de sede)
   useEffect(() => {
     async function cargar() {
       setLoad(true);
@@ -115,7 +115,22 @@ export default function Operar({ sede, user }) {
       api.getUsuarios().then(setUsuarios).catch(() => {});
     }
     cargar();
-  }, [sede, guardando]);
+  }, [sede]);
+
+  // RECARGA SILENCIOSA (Para después de guardar, sin poner la pantalla en "Cargando...")
+  async function recargarSilencioso() {
+    try {
+      const [e, h] = await Promise.all([
+        api.getEstadoTurnos({ sede, fecha: hoy() }),
+        api.getHoy(sede, hoy()).catch(() => ({ arqueos: [], movimientos: [] })),
+      ]);
+      setEstado(e);
+      setArqueosHoy(h.arqueos || []);
+      setMovimientosHoy(h.movimientos || []);
+    } catch (err) {
+      console.error("Error en recarga silenciosa", err);
+    }
+  }
 
   useEffect(() => {
     pedirPermisoNotificaciones();
@@ -147,23 +162,6 @@ export default function Operar({ sede, user }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [pinModalAbierto, pin]);
-
-  async function recargar() {
-    setLoad(true);
-    try {
-      const [e, h] = await Promise.all([
-        api.getEstadoTurnos({ sede, fecha: hoy() }),
-        api.getHoy(sede, hoy()).catch(() => ({ arqueos: [], movimientos: [] })),
-      ]);
-      setEstado(e);
-      setArqueosHoy(h.arqueos || []);
-      setMovimientosHoy(h.movimientos || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoad(false);
-    }
-  }
 
   const ajustar = (valor, delta) => {
     const actual = Number(cant[valor] || 0);
@@ -207,12 +205,14 @@ export default function Operar({ sede, user }) {
       cerrarPinModal(); resetForms(); setVista('menu');
       setMsg(`✅ Movimiento guardado por ${r.registrado_por || 'usuario'}`);
       setTimeout(() => setMsg(''), 3000);
+      
+      // Actualiza los datos en segundo plano
+      recargarSilencioso();
     } catch (e) {
       setPinError(e.message); setPin('');
     } finally { setGuardandoPin(false); }
   }
 
-  // --- NUEVO: abrirTurno modificado para consultar pendientes ---
   async function abrirTurno() {
     if (guardando) return;
     if (totalContado === 0) { setError('Debes contar al menos un billete o moneda'); return; }
@@ -241,6 +241,7 @@ export default function Operar({ sede, user }) {
       };
       DENOMS.forEach(d => arqueoPayload['d' + d.valor] = Number(cant[d.valor] || 0));
       await api.guardarArqueo(arqueoPayload);
+      
       await api.abrirTurno({
         sede, fecha: hoy(), turno: turnoActivo,
         hora: hora(), usuario: user.nombre || user.email,
@@ -248,8 +249,14 @@ export default function Operar({ sede, user }) {
         apertura_con_pendiente: conPendiente,
         turno_pendiente_id: turnoPendienteId,
       });
+      
       setPendientesModal(null);
-      resetForms(); setVista('menu'); await recargar();
+      resetForms(); 
+      setVista('menu'); 
+      
+      // Actualiza en segundo plano sin bloquear la pantalla
+      recargarSilencioso();
+      
     } catch (e) {
       setError(e.message);
     } finally {
@@ -275,14 +282,16 @@ export default function Operar({ sede, user }) {
       };
       DENOMS.forEach(d => payload['d' + d.valor] = Number(cant[d.valor] || 0));
       await api.guardarArqueo(payload);
+      
       resetForms(); setVista('menu');
       setMsg('✅ Arqueo guardado');
       setTimeout(() => setMsg(''), 3000);
+      
+      recargarSilencioso();
     } catch (e) { setError(e.message); }
     finally { setGuardando(false); }
   }
 
-  // --- NUEVO: cerrarTurno modificado para enviar el turno_id ---
   async function cerrarTurno() {
     if (guardando) return;
     const ventasNum = Number(ventas || 0);
@@ -304,14 +313,14 @@ export default function Operar({ sede, user }) {
       });
       setRes(r);
 
-      // Obtenemos el turno_id actual
       const turnoIdActual = turnoActivo === 1 ? t1.apertura?.id : t2.apertura?.id;
 
       await api.cerrarTurno({
         sede, fecha: hoy(), turno: turnoActivo,
         hora: hora(), usuario: user.nombre || user.email,
-        turno_id: turnoIdActual, // Enviamos el id
+        turno_id: turnoIdActual,
       });
+      
       setVista('resultado');
     } catch (e) { setError(e.message); }
     finally { setGuardando(false); }
@@ -578,7 +587,7 @@ export default function Operar({ sede, user }) {
           )}
           <div className="acciones-arqueo">
             <button className="btn-guardar"
-              onClick={() => { resetForms(); setRes(null); setVista('menu'); recargar(); }}>
+              onClick={() => { resetForms(); setRes(null); setVista('menu'); recargarSilencioso(); }}>
               Volver al inicio
             </button>
           </div>
@@ -618,7 +627,6 @@ export default function Operar({ sede, user }) {
         </div>
       )}
 
-      {/* --- NUEVO MODAL DE TURNOS PENDIENTES --- */}
       {pendientesModal && (
         <div className="modal-overlay">
           <div className="modal-box modal-pendientes" onClick={e => e.stopPropagation()}>
