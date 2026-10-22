@@ -330,7 +330,7 @@ export default function Operar({ sede, user }) {
           // Forzar recarga completa para limpiar el estado de React y volver al Login
           window.location.href = '/caja-mascotas/'; 
           window.location.reload();
-        }, 5000); // 5 segundos para que el cajero lea el resultado
+           }, 30000); // 30000 milisegundos = 30 segundos
       }
 
     } catch (e) { setError(e.message); }
