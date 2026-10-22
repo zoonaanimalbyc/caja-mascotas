@@ -292,7 +292,7 @@ export default function Operar({ sede, user }) {
     finally { setGuardando(false); }
   }
 
-  async function cerrarTurno() {
+   async function cerrarTurno() {
     if (guardando) return;
     const ventasNum = Number(ventas || 0);
     if (ventasNum < 0) { setError('Las ventas no pueden ser negativas'); return; }
@@ -322,6 +322,17 @@ export default function Operar({ sede, user }) {
       });
       
       setVista('resultado');
+
+      // --- NUEVO: EXPULSAR AL CERRAR EL TURNO 2 ---
+      if (turnoActivo === 2) {
+        setTimeout(() => {
+          localStorage.removeItem('user');
+          // Forzar recarga completa para limpiar el estado de React y volver al Login
+          window.location.href = '/caja-mascotas/'; 
+          window.location.reload();
+        }, 5000); // 5 segundos para que el cajero lea el resultado
+      }
+
     } catch (e) { setError(e.message); }
     finally { setGuardando(false); }
   }

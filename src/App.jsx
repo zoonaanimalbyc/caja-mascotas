@@ -18,6 +18,7 @@ export default function App() {
   const [bloqueoSede, setBloqueoSede] = useState(null);
   const [cambiando, setCambiando] = useState(false);
   const [recordatorioGlobal, setRecordatorioGlobal] = useState(false);
+  
   const nav = useNavigate();
   const location = useLocation();
 
@@ -27,6 +28,40 @@ export default function App() {
   }, [user]);
 
   useEffect(() => { localStorage.setItem('sede', sede); }, [sede]);
+
+  // --- NUEVO: TEMPORIZADOR DE INACTIVIDAD ---
+  useEffect(() => {
+    if (!user) return;
+
+    let timer;
+
+    const resetTimer = () => {
+      clearTimeout(timer);
+      // 15 minutos = 15 * 60 * 1000 = 900000 ms
+      timer = setTimeout(() => {
+        setUser(null);
+        alert('🔒 Sesión cerrada automáticamente por inactividad (15 minutos).');
+        nav('/');
+      }, 900000);
+    };
+
+    // Escuchar eventos de interacción
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('keydown', resetTimer);
+    window.addEventListener('click', resetTimer);
+    window.addEventListener('touchstart', resetTimer); // Para pantallas táctiles
+
+    // Iniciar el temporizador al entrar
+    resetTimer();
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('keydown', resetTimer);
+      window.removeEventListener('click', resetTimer);
+      window.removeEventListener('touchstart', resetTimer);
+    };
+  }, [user, nav]);
 
   useEffect(() => {
     if (!user) return;
@@ -113,7 +148,6 @@ export default function App() {
 
   if (!user) return <Login onLogin={setUser} />;
 
-  // ---------- VERIFICAR SI EL USUARIO ES ADMIN O SUPERVISOR ----------
   const roles = user.roles || [user.rol || ''];
   const esAdminOSupervisor =
     roles.includes('admin') || roles.includes('supervisor');
