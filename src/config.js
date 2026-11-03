@@ -20,6 +20,7 @@ export const TIPOS_MOV = [
   { id: 'FLETE',   label: '🛵 Flete (domiciliario)' },
   { id: 'SPA',     label: '💆 SPA (traslado tienda → spa)' },
   { id: 'SPA_QR',  label: '📱 SPA QR / transferencia' },
+  { id: 'SPA_EFECTIVO', label: '💵 SPA (Efectivo)' },
 ];
 
 export const SEDES = [

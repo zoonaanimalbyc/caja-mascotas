@@ -71,6 +71,7 @@ async function call(action, payload = {}) {
 export const api = {
   ping:                    ()           => call('ping'),
   login:                   (data)       => call('login', data),
+  validarPin:              (data)       => call('validarPin', data),
   getHoy:                  (sede, fecha)=> call('getHoy', { sede, fecha }),
   guardarArqueo:           (data)       => call('guardarArqueo', data),
   guardarMovimiento:       (data)       => call('guardarMovimiento', data),

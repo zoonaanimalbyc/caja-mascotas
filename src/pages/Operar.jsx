@@ -27,6 +27,7 @@ export default function Operar({ sede, user }) {
   const [ventasSiigo, setVentasSiigo] = useState('');
 
   const [pinModalAbierto, setPinModalAbierto] = useState(false);
+  const [pinAccion, setPinAccion] = useState(null); 
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState('');
   const [guardandoPin, setGuardandoPin] = useState(false);
@@ -37,6 +38,7 @@ export default function Operar({ sede, user }) {
   const [guardando, setGuardando] = useState(false);
 
   const [pendientesModal, setPendientesModal] = useState(null);
+  const [verArqueoModal, setVerArqueoModal] = useState(null); 
 
   const t1 = estado?.turno1 || {};
   const t2 = estado?.turno2 || {};
@@ -66,13 +68,13 @@ export default function Operar({ sede, user }) {
       return h >= horaApertura && h <= ahora;
     });
 
-    const sum = tipo => movsTurno.filter(m => m.tipo === tipo)
-                                  .reduce((a, m) => a + Number(m.valor || 0), 0);
+    const sum = tipo => movsTurno.filter(m => m.tipo === tipo).reduce((a, m) => a + Number(m.valor || 0), 0);
 
     const total_ingresos = sum('INGRESO');
     const total_egresos = sum('EGRESO');
     const total_fletes = sum('FLETE');
     const total_spa = sum('SPA');
+    const total_spa_efectivo = sum('SPA_EFECTIVO');
 
     const arqueosTurno = arqueosHoy.filter(a => {
       if (a.tipo === 'cierre') return false;
@@ -85,17 +87,16 @@ export default function Operar({ sede, user }) {
     const ventasSiigoActual = ultimoArqueo ? (Number(ultimoArqueo.ventas_siigo) || 0) : 0;
     const contadoActual = ultimoArqueo ? (Number(ultimoArqueo.total) || 0) : saldoInicial;
 
-    const esperado = saldoInicial + ventasSiigoActual + total_ingresos - total_egresos - total_fletes - total_spa;
+    const esperado = saldoInicial + ventasSiigoActual + total_ingresos + total_spa_efectivo - total_egresos - total_fletes - total_spa;
     const diferencia = contadoActual - esperado;
 
     return {
       usuario: turnoData.usuario_apertura, horaApertura, saldoInicial, ventasSiigoActual,
-      total_ingresos, total_egresos, total_fletes, total_spa, esperado, contadoActual,
+      total_ingresos, total_egresos, total_fletes, total_spa, total_spa_efectivo, esperado, contadoActual,
       diferencia, ultimoArqueo, tieneArqueoParcial: !!ultimoArqueo,
     };
   })();
 
-  // CARGA INICIAL (Solo se ejecuta al entrar a la pantalla o al cambiar de sede)
   useEffect(() => {
     async function cargar() {
       setLoad(true);
@@ -117,7 +118,6 @@ export default function Operar({ sede, user }) {
     cargar();
   }, [sede]);
 
-  // RECARGA SILENCIOSA (Para después de guardar, sin poner la pantalla en "Cargando...")
   async function recargarSilencioso() {
     try {
       const [e, h] = await Promise.all([
@@ -185,29 +185,93 @@ export default function Operar({ sede, user }) {
     if (!movDesc || !movDesc.trim()) { setError('⚠️ La descripción es obligatoria'); return; }
     const v = Number(movValor || 0);
     if (!movValor || v <= 0) { setError('⚠️ Debes ingresar un valor mayor a 0'); return; }
-    setError(''); setPin(''); setPinError(''); setPinModalAbierto(true);
+    setError(''); setPin(''); setPinError(''); setPinAccion('movimiento'); setPinModalAbierto(true);
   }
 
-  function cerrarPinModal() { setPinModalAbierto(false); setPin(''); setPinError(''); }
+  function intentarGuardarArqueo() {
+    if (totalContado === 0) { setError('Debes ingresar al menos una cantidad'); return; }
+    setError(''); setPin(''); setPinError(''); setPinAccion('arqueo'); setPinModalAbierto(true);
+  }
+
+  function intentarCerrarTurno() {
+    const ventasNum = Number(ventas || 0);
+    if (ventasNum < 0) { setError('Las ventas no pueden ser negativas'); return; }
+    if (ventasNum > LIMITE_VENTAS) { setError(`Las ventas no pueden pasar de ${fmt(LIMITE_VENTAS)}.`); return; }
+    if (totalContado === 0) { setError('Debes ingresar el arqueo'); return; }
+    setError(''); setPin(''); setPinError(''); setPinAccion('cierre'); setPinModalAbierto(true);
+  }
+
+  function cerrarPinModal() { setPinModalAbierto(false); setPin(''); setPinError(''); setPinAccion(null); }
 
   async function confirmarPin() {
     if (guardandoPin) return;
     if (!pin || pin.length < 4) { setPinError('Ingresa tu PIN'); return; }
     setGuardandoPin(true); setPinError('');
+    
     try {
-      const v = Number(movValor || 0);
-      const r = await api.guardarMovimiento({
-        sede, fecha: hoy(), hora: hora(), tipo: movTipo,
-        descripcion: movDesc.trim(), valor: v,
-        usuario_app: user.nombre || user.email,
-        pin_usuario: pin, usuario_email: user.nombre || user.email,
-      });
-      cerrarPinModal(); resetForms(); setVista('menu');
-      setMsg(`✅ Movimiento guardado por ${r.registrado_por || 'usuario'}`);
-      setTimeout(() => setMsg(''), 3000);
-      
-      // Actualiza los datos en segundo plano
+      await api.validarPin({ pin });
+
+      if (pinAccion === 'movimiento') {
+        const v = Number(movValor || 0);
+        const r = await api.guardarMovimiento({
+          sede, fecha: hoy(), hora: hora(), tipo: movTipo,
+          descripcion: movDesc.trim(), valor: v,
+          usuario_app: user.nombre || user.email,
+          pin_usuario: pin, usuario_email: user.nombre || user.email,
+        });
+        setMsg(`✅ Movimiento guardado por ${r.registrado_por}`);
+        
+      } else if (pinAccion === 'arqueo') {
+        const payload = {
+          sede, fecha: hoy(), hora: hora(), tipo: '2h',
+          usuario_email: user.nombre || user.email,
+          observaciones: obs, ventas_siigo: Number(ventasSiigo) || 0,
+          pin_usuario: pin,
+        };
+        DENOMS.forEach(d => payload['d' + d.valor] = Number(cant[d.valor] || 0));
+        const r = await api.guardarArqueo(payload);
+        setMsg(`✅ Arqueo guardado por ${r.registrado_por}`);
+        
+      } else if (pinAccion === 'cierre') {
+        const ventasNum = Number(ventas || 0);
+        const arqueoPayload = {
+          sede, fecha: hoy(), hora: hora(), tipo: 'cierre',
+          usuario_email: user.nombre || user.email,
+          observaciones: `Cierre turno ${turnoActivo}`, ventas_siigo: ventasNum,
+          pin_usuario: pin,
+        };
+        DENOMS.forEach(d => arqueoPayload['d' + d.valor] = Number(cant[d.valor] || 0));
+        await api.guardarArqueo(arqueoPayload);
+        
+        const r = await api.cerrarDia({
+          sede, fecha: hoy(), turno: turnoActivo, ventas_siigo: ventasNum,
+          usuario_email: user.nombre || user.email, observaciones: obs, hora: hora(),
+        });
+        setRes(r);
+
+        const turnoIdActual = turnoActivo === 1 ? t1.apertura?.id : t2.apertura?.id;
+        await api.cerrarTurno({
+          sede, fecha: hoy(), turno: turnoActivo,
+          hora: hora(), usuario: user.nombre || user.email,
+          turno_id: turnoIdActual, pin_usuario: pin,
+        });
+        
+        setVista('resultado');
+        if (turnoActivo === 2) {
+          setTimeout(() => {
+            localStorage.removeItem('user');
+            window.location.href = '/caja-mascotas/'; 
+            window.location.reload();
+          }, 30000);
+        }
+      }
+
+      cerrarPinModal(); 
+      resetForms(); 
+      if (pinAccion !== 'cierre') setVista('menu');
+      setTimeout(() => setMsg(''), 4000);
       recargarSilencioso();
+
     } catch (e) {
       setPinError(e.message); setPin('');
     } finally { setGuardandoPin(false); }
@@ -251,12 +315,8 @@ export default function Operar({ sede, user }) {
       });
       
       setPendientesModal(null);
-      resetForms(); 
-      setVista('menu'); 
-      
-      // Actualiza en segundo plano sin bloquear la pantalla
+      resetForms(); setVista('menu'); 
       recargarSilencioso();
-      
     } catch (e) {
       setError(e.message);
     } finally {
@@ -268,73 +328,6 @@ export default function Operar({ sede, user }) {
     const turnoPendienteId = pendientesModal.pendientes[0]?.turno_id;
     setPendientesModal(null);
     ejecutarApertura(true, turnoPendienteId);
-  }
-
-  async function guardarArqueo() {
-    if (guardando) return;
-    if (totalContado === 0) { setError('Debes ingresar al menos una cantidad'); return; }
-    setGuardando(true);
-    try {
-      const payload = {
-        sede, fecha: hoy(), hora: hora(), tipo: '2h',
-        usuario_email: user.nombre || user.email,
-        observaciones: obs, ventas_siigo: Number(ventasSiigo) || 0,
-      };
-      DENOMS.forEach(d => payload['d' + d.valor] = Number(cant[d.valor] || 0));
-      await api.guardarArqueo(payload);
-      
-      resetForms(); setVista('menu');
-      setMsg('✅ Arqueo guardado');
-      setTimeout(() => setMsg(''), 3000);
-      
-      recargarSilencioso();
-    } catch (e) { setError(e.message); }
-    finally { setGuardando(false); }
-  }
-
-   async function cerrarTurno() {
-    if (guardando) return;
-    const ventasNum = Number(ventas || 0);
-    if (ventasNum < 0) { setError('Las ventas no pueden ser negativas'); return; }
-    if (ventasNum > LIMITE_VENTAS) { setError(`Las ventas no pueden pasar de ${fmt(LIMITE_VENTAS)}.`); return; }
-    if (totalContado === 0) { setError('Debes ingresar el arqueo'); return; }
-    setGuardando(true); setError('');
-    try {
-      const arqueoPayload = {
-        sede, fecha: hoy(), hora: hora(), tipo: 'cierre',
-        usuario_email: user.nombre || user.email,
-        observaciones: `Cierre turno ${turnoActivo}`, ventas_siigo: ventasNum,
-      };
-      DENOMS.forEach(d => arqueoPayload['d' + d.valor] = Number(cant[d.valor] || 0));
-      await api.guardarArqueo(arqueoPayload);
-      const r = await api.cerrarDia({
-        sede, fecha: hoy(), turno: turnoActivo, ventas_siigo: ventasNum,
-        usuario_email: user.nombre || user.email, observaciones: obs, hora: hora(),
-      });
-      setRes(r);
-
-      const turnoIdActual = turnoActivo === 1 ? t1.apertura?.id : t2.apertura?.id;
-
-      await api.cerrarTurno({
-        sede, fecha: hoy(), turno: turnoActivo,
-        hora: hora(), usuario: user.nombre || user.email,
-        turno_id: turnoIdActual,
-      });
-      
-      setVista('resultado');
-
-      // --- NUEVO: EXPULSAR AL CERRAR EL TURNO 2 ---
-      if (turnoActivo === 2) {
-        setTimeout(() => {
-          localStorage.removeItem('user');
-          // Forzar recarga completa para limpiar el estado de React y volver al Login
-          window.location.href = '/caja-mascotas/'; 
-          window.location.reload();
-           }, 30000); // 30000 milisegundos = 30 segundos
-      }
-
-    } catch (e) { setError(e.message); }
-    finally { setGuardando(false); }
   }
 
   if (load) return <div className="loading">Cargando estado del día…</div>;
@@ -413,6 +406,14 @@ export default function Operar({ sede, user }) {
                 <AlertaDiferencia monto={Number(t2.apertura.diferencia_apertura)} />
               )}
               <EstadoTurno estado={estadoTurno} />
+              
+              {estadoTurno.tieneArqueoParcial && (
+                <button className="btn-secundario" style={{ width: '100%', marginBottom: 10, border: '1px solid #1F4A2C', color: '#1F4A2C' }} 
+                  onClick={() => setVerArqueoModal(estadoTurno.ultimoArqueo)}>
+                  🔍 Ver desglose del último arqueo
+                </button>
+              )}
+
               <div className="grid-botones">
                 <button disabled={guardando} onClick={() => { setVista('arqueo'); resetForms(); }}>💵 Arqueo parcial</button>
                 <button disabled={guardando} onClick={() => { setVista('movimiento'); resetForms(); }}>💸 Movimiento</button>
@@ -499,7 +500,7 @@ export default function Operar({ sede, user }) {
           {error && <p className="err">{error}</p>}
           <div className="acciones-arqueo">
             <button className="btn-secundario" disabled={guardando} onClick={() => setVista('menu')}>← Volver</button>
-            <button className="btn-guardar" onClick={guardarArqueo} disabled={guardando}>
+            <button className="btn-guardar" onClick={intentarGuardarArqueo} disabled={guardando}>
               {guardando ? '⏳ Guardando… espera' : '💾 Guardar arqueo'}
             </button>
           </div>
@@ -564,7 +565,7 @@ export default function Operar({ sede, user }) {
           {error && <p className="err">{error}</p>}
           <div className="acciones-arqueo">
             <button className="btn-secundario" disabled={guardando} onClick={() => setVista('menu')}>← Volver</button>
-            <button className="btn-guardar" onClick={cerrarTurno} disabled={guardando}>
+            <button className="btn-guardar" onClick={intentarCerrarTurno} disabled={guardando}>
               {guardando ? '⏳ Cerrando… espera' : `🌙 Cerrar turno ${turnoActivo}`}
             </button>
           </div>
@@ -613,7 +614,11 @@ export default function Operar({ sede, user }) {
               <button className="modal-close" onClick={cerrarPinModal}>✕</button>
             </div>
             <div className="modal-body">
-              <p className="info">Ingresa tu PIN para registrar el movimiento. Quedará guardado con tu nombre.</p>
+              <p className="info">
+                {pinAccion === 'movimiento' && "Ingresa tu PIN para registrar el movimiento."}
+                {pinAccion === 'arqueo' && "Ingresa tu PIN para guardar el arqueo parcial."}
+                {pinAccion === 'cierre' && "Ingresa tu PIN para cerrar el turno."}
+              </p>
               <div className="pin-display" style={{ margin: '20px 0' }}>
                 {Array.from({ length: 6 }).map((_, i) => (
                   <span key={i} className={`dot ${i < pin.length ? 'lleno' : ''}`} />
@@ -678,6 +683,51 @@ export default function Operar({ sede, user }) {
         </div>
       )}
 
+      {verArqueoModal && (
+        <div className="modal-overlay" onClick={() => setVerArqueoModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3>🔍 Desglose del último arqueo</h3>
+              <button className="modal-close" onClick={() => setVerArqueoModal(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p className="info" style={{ marginBottom: 15 }}>
+                Realizado a las {String(verArqueoModal.hora || '').replace("'", '').slice(0, 5)}
+              </p>
+              <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #ccc' }}>
+                    <th style={{ padding: '8px 0' }}>Denominación</th>
+                    <th style={{ textAlign: 'center' }}>Cantidad</th>
+                    <th style={{ textAlign: 'right' }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {DENOMS.map(d => {
+                    const cant = Number(verArqueoModal['d' + d.valor] || 0);
+                    if (cant === 0) return null;
+                    return (
+                      <tr key={d.valor} style={{ borderBottom: '1px solid #eee' }}>
+                        <td style={{ padding: '8px 0' }}>{fmt(d.valor)}</td>
+                        <td style={{ textAlign: 'center' }}>{cant}</td>
+                        <td style={{ textAlign: 'right' }}>{fmt(cant * d.valor)}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr style={{ fontWeight: 'bold' }}>
+                    <td colSpan="2" style={{ padding: '12px 0', textAlign: 'right' }}>Total contado:</td>
+                    <td style={{ textAlign: 'right', color: '#1F4A2C' }}>{fmt(verArqueoModal.total)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="acciones-arqueo">
+              <button className="btn-secundario" onClick={() => setVerArqueoModal(null)}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -694,9 +744,12 @@ function EstadoTurno({ estado }) {
         <div className="estado-linea"><span>Saldo inicial (contado apertura)</span><b>{fmtLocal(estado.saldoInicial)}</b></div>
         <div className="estado-linea"><span>Ventas SIIGO {estado.tieneArqueoParcial ? '(último arqueo)' : '(sin arqueo aún)'}</span><b>+{fmtLocal(estado.ventasSiigoActual)}</b></div>
         <div className="estado-linea"><span>+ Ingresos</span><b>+{fmtLocal(estado.total_ingresos)}</b></div>
+        {estado.total_spa_efectivo > 0 && (
+          <div className="estado-linea"><span>+ SPA Efectivo</span><b>+{fmtLocal(estado.total_spa_efectivo)}</b></div>
+        )}
         <div className="estado-linea"><span>− Egresos</span><b>−{fmtLocal(estado.total_egresos)}</b></div>
         <div className="estado-linea"><span>− Fletes</span><b>−{fmtLocal(estado.total_fletes)}</b></div>
-        <div className="estado-linea"><span>− SPA</span><b>−{fmtLocal(estado.total_spa)}</b></div>
+        <div className="estado-linea"><span>− SPA (Transferencia)</span><b>−{fmtLocal(estado.total_spa)}</b></div>
         <div className="estado-linea estado-linea-total"><span>ESPERADO AHORA</span><b>{fmtLocal(estado.esperado)}</b></div>
         <div className="estado-linea">
           <span>{estado.tieneArqueoParcial ? `Último arqueo (${String(estado.ultimoArqueo.hora).replace("'", '').slice(0, 5)})` : 'Contado apertura'}</span>
