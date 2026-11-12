@@ -87,7 +87,7 @@ export default function Operar({ sede, user }) {
     const ventasSiigoActual = ultimoArqueo ? (Number(ultimoArqueo.ventas_siigo) || 0) : 0;
     const contadoActual = ultimoArqueo ? (Number(ultimoArqueo.total) || 0) : saldoInicial;
 
-    const esperado = saldoInicial + ventasSiigoActual + total_ingresos + total_spa_efectivo - total_egresos - total_fletes - total_spa;
+    const esperado = saldoInicial + ventasSiigoActual + total_ingresos - total_egresos - total_fletes - total_spa - total_spa_efectivo;
     const diferencia = contadoActual - esperado;
 
     return {
@@ -745,8 +745,8 @@ function EstadoTurno({ estado }) {
         <div className="estado-linea"><span>Ventas SIIGO {estado.tieneArqueoParcial ? '(último arqueo)' : '(sin arqueo aún)'}</span><b>+{fmtLocal(estado.ventasSiigoActual)}</b></div>
         <div className="estado-linea"><span>+ Ingresos</span><b>+{fmtLocal(estado.total_ingresos)}</b></div>
         {estado.total_spa_efectivo > 0 && (
-          <div className="estado-linea"><span>+ SPA Efectivo</span><b>+{fmtLocal(estado.total_spa_efectivo)}</b></div>
-        )}
+        <div className="estado-linea"><span>− SPA Efectivo</span><b>−{fmtLocal(estado.total_spa_efectivo)}</b></div>
+         )}
         <div className="estado-linea"><span>− Egresos</span><b>−{fmtLocal(estado.total_egresos)}</b></div>
         <div className="estado-linea"><span>− Fletes</span><b>−{fmtLocal(estado.total_fletes)}</b></div>
         <div className="estado-linea"><span>− SPA (Transferencia)</span><b>−{fmtLocal(estado.total_spa)}</b></div>
